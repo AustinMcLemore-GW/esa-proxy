@@ -9,8 +9,12 @@ from flask_cors import CORS
 import requests
 import math
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app)  # Allow all origins — required for browser artifact to call this
+
+@app.route('/')
+def index():
+    return app.send_static_file('index.html')
 
 # ── Haversine distance (miles) ────────────────────────────────────────────────
 

@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Phase I ESA Database Search</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #191c24;
+    --surface2: #21252f;
+    --border: #2a2e3a;
+    --border2: #363b49;
+    --text: #e8eaf0;
+    --text2: #8b909e;
+    --text3: #555b6b;
+    --accent: #4ade80;
+    --accent-dim: rgba(74,222,128,0.12);
+    --warn: #fbbf24;
+    --warn-dim: rgba(251,191,36,0.1);
+    --danger: #f87171;
+    --danger-dim: rgba(248,113,113,0.1);
+    --info: #60a5fa;
+    --info-dim: rgba(96,165,250,0.1);
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+    --radius: 6px;
+    --radius-lg: 10px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 15px; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* ── Layout ── */
+  .shell { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  /* ── Header ── */
+  header { margin-bottom: 2.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+  .header-top { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  h1 { font-size: 1.25rem; font-weight: 500; letter-spacing: -0.01em; }
+  .header-sub { font-size: 0.8rem; color: var(--text3); font-family: var(--mono); }
+  .proxy-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.75rem; font-family: var(--mono);
+    padding: 4px 10px; border-radius: 20px;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text2); cursor: pointer; transition: border-color 0.2s;
+  }
+  .proxy-pill:hover { border-color: var(--border2); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); flex-shrink: 0; transition: background 0.3s; }
+  .dot.live { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .dot.dead { background: var(--danger); }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 2px; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+  .tab {
+    padding: 8px 16px; font-size: 0.85rem; font-weight: 400;
+    background: none; border: none; border-bottom: 2px solid transparent;
+    color: var(--text3); cursor: pointer; transition: color 0.15s; margin-bottom: -1px;
+    font-family: var(--sans);
+  }
+  .tab:hover { color: var(--text2); }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 500; }
+
+  /* ── Cards / Surfaces ── */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  .field-label { font-size: 0.75rem; color: var(--text3); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; display: block; }
+
+  /* ── Inputs ── */
+  input[type=text], input[type=number] {
+    height: 38px; padding: 0 12px; font-size: 0.875rem;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); color: var(--text); width: 100%;
+    font-family: var(--mono); transition: border-color 0.15s;
+  }
+  input:focus { outline: none; border-color: var(--accent); }
+  input::placeholder { color: var(--text3); }
+
+  /* ── Buttons ── */
+  .btn {
+    height: 38px; padding: 0 16px; font-size: 0.875rem; font-weight: 500;
+    background: none; border: 1px solid var(--border2); border-radius: var(--radius);
+    color: var(--text2); cursor: pointer; font-family: var(--sans);
+    transition: all 0.15s; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { border-color: var(--text3); color: var(--text); }
+  .btn-primary {
+    background: var(--accent); border-color: var(--accent); color: #0f1117;
+    font-weight: 500; height: 42px; padding: 0 24px; font-size: 0.9rem;
+  }
+  .btn-primary:hover { background: #6ee7a0; border-color: #6ee7a0; color: #0a0f0a; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Row layouts ── */
+  .row { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 10px; }
+  .row .grow { flex: 1; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 110px; gap: 10px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* ── Status messages ── */
+  .msg { font-size: 0.8rem; margin-top: 6px; font-family: var(--mono); }
+  .msg.ok { color: var(--accent); }
+  .msg.err { color: var(--danger); }
+
+  /* ── Progress ── */
+  .progress-wrap { margin-bottom: 1.5rem; }
+  .progress-label { font-size: 0.8rem; color: var(--text2); font-family: var(--mono); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .spinner { width: 12px; height: 12px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .progress-track { height: 2px; background: var(--border); border-radius: 1px; overflow: hidden; }
+  .progress-bar { height: 100%; background: var(--accent); border-radius: 1px; transition: width 0.4s ease; }
+
+  /* ── Summary strip ── */
+  .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+  .sum-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; }
+  .sum-val { font-size: 1.75rem; font-weight: 300; font-family: var(--mono); }
+  .sum-lbl { font-size: 0.75rem; color: var(--text3); margin-top: 2px; }
+
+  /* ── DB result groups ── */
+  .group-label {
+    font-size: 0.72rem; font-family: var(--mono); text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--text3);
+    padding-bottom: 6px; border-bottom: 1px solid var(--border);
+    margin-bottom: 8px; display: flex; align-items: baseline; gap: 10px;
+  }
+  .group-sub { font-size: 0.7rem; color: var(--text3); text-transform: none; letter-spacing: 0; opacity: 0.7; }
+  .db-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; margin-bottom: 1.5rem; }
+  .db-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 10px 12px;
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+    transition: border-color 0.2s;
+  }
+  .db-card.hit { border-color: var(--warn); }
+  .db-card.has-nc { border-color: var(--danger); }
+  .db-card.error { border-color: var(--border2); opacity: 0.6; }
+  .db-name { font-size: 0.825rem; color: var(--text); font-weight: 500; }
+  .db-src { font-size: 0.72rem; color: var(--text3); font-family: var(--mono); margin-top: 2px; }
+  .db-count { font-size: 1.4rem; font-weight: 300; font-family: var(--mono); flex-shrink: 0; color: var(--text3); }
+  .db-count.pos { color: var(--warn); }
+  .db-count.nc { color: var(--danger); }
+  .badge { font-size: 0.68rem; padding: 2px 7px; border-radius: 20px; font-family: var(--mono); display: inline-block; margin-top: 4px; }
+  .badge-info { background: var(--info-dim); color: var(--info); border: 1px solid rgba(96,165,250,0.2); }
+  .badge-nc { background: var(--danger-dim); color: var(--danger); border: 1px solid rgba(248,113,113,0.2); }
+  .badge-warn { background: var(--warn-dim); color: var(--warn); border: 1px solid rgba(251,191,36,0.2); }
+  .toggle-sites { font-size: 0.72rem; color: var(--text3); background: none; border: none; cursor: pointer; font-family: var(--mono); padding: 3px 0; display: block; margin-top: 4px; }
+  .toggle-sites:hover { color: var(--text2); }
+  .sites-list { margin-top: 8px; border-top: 1px solid var(--border); padding-top: 6px; }
+  .site-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+  .site-row:last-child { border: none; }
+  .site-name { font-size: 0.78rem; color: var(--text); font-weight: 500; }
+  .site-status { font-size: 0.7rem; color: var(--text3); font-family: var(--mono); }
+  .site-dist { font-size: 0.72rem; color: var(--text3); font-family: var(--mono); white-space: nowrap; flex-shrink: 0; }
+
+  /* ── Non-compliant overrides ── */
+  .nc-row { display: grid; grid-template-columns: 1fr 80px 38px; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .btn-icon { width: 38px; height: 38px; padding: 0; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+  /* ── Report ── */
+  .report-area {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 1.5rem;
+    font-size: 0.875rem; line-height: 1.9; color: var(--text);
+    white-space: pre-wrap; word-break: break-word; font-family: var(--sans);
+  }
+  .report-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; flex-wrap: wrap; gap: 10px; }
+  .report-note { font-size: 0.75rem; color: var(--text3); font-family: var(--mono); max-width: 440px; line-height: 1.5; }
+
+  /* ── Error banner ── */
+  .error-banner {
+    background: var(--danger-dim); border: 1px solid rgba(248,113,113,0.25);
+    border-radius: var(--radius); padding: 10px 14px;
+    font-size: 0.8rem; color: var(--danger); font-family: var(--mono);
+    margin-bottom: 1rem; line-height: 1.6;
+  }
+
+  /* ── Divider ── */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+
+  /* ── Empty state ── */
+  .empty { text-align: center; padding: 3rem 1rem; color: var(--text3); font-size: 0.875rem; }
+  .empty-icon { font-size: 2rem; margin-bottom: 0.75rem; opacity: 0.4; }
+
+  /* ── Info strip ── */
+  .info-strip {
+    background: var(--info-dim); border: 1px solid rgba(96,165,250,0.15);
+    border-radius: var(--radius); padding: 8px 14px;
+    font-size: 0.78rem; color: var(--info); font-family: var(--mono);
+    margin-bottom: 1.25rem; line-height: 1.6;
+  }
+
+  @media (max-width: 600px) {
+    .grid3 { grid-template-columns: 1fr 1fr; }
+    .grid3 > :last-child { grid-column: 1 / -1; }
+    .summary { grid-template-columns: 1fr 1fr; }
+    .summary > :last-child { grid-column: 1 / -1; }
+    .header-top { flex-direction: column; gap: 0.5rem; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header>
+    <div class="header-top">
+      <div>
+        <h1>Phase I ESA Database Search</h1>
+        <div class="header-sub">ASTM E1527-21 · Florida · All 16 required databases</div>
+      </div>
+      <button class="proxy-pill" onclick="checkProxy()">
+        <div class="dot" id="proxy-dot"></div>
+        <span id="proxy-label">esa-proxy.onrender.com</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" id="tab-search" onclick="showTab('search')">Search</button>
+    <button class="tab" id="tab-results" onclick="showTab('results')">Results</button>
+    <button class="tab" id="tab-report" onclick="showTab('report')">Report</button>
+  </div>
+
+  <!-- ── SEARCH PANE ── -->
+  <div id="pane-search">
+    <div class="card">
+      <div class="row">
+        <div class="grow">
+          <label class="field-label">Street address</label>
+          <input type="text" id="addr" placeholder="123 Main St, Tampa, FL 33602" onkeydown="if(event.key==='Enter')geocode()"/>
+        </div>
+        <button class="btn" onclick="geocode()" id="geo-btn">Geocode →</button>
+      </div>
+      <div class="grid3">
+        <div>
+          <label class="field-label">Latitude</label>
+          <input type="number" id="lat" step="0.000001" placeholder="27.852924"/>
+        </div>
+        <div>
+          <label class="field-label">Longitude</label>
+          <input type="number" id="lng" step="0.000001" placeholder="-82.703508"/>
+        </div>
+        <div>
+          <label class="field-label">ZIP (ERNS)</label>
+          <input type="text" id="zip" placeholder="33615" maxlength="5"/>
+        </div>
+      </div>
+      <div id="geo-msg" style="display:none" class="msg"></div>
+    </div>
+
+    <div class="info-strip">
+      Queries: EPA ECHO (RCRA CA, TSD, generators) · EPA FRS/SEMS (NPL, delisted NPL, CERCLA/NFRAP) · USACE FUDS · FDEP ArcGIS (ERIC, CHAZ, STCM, solid waste, brownfields, IC registry) · Envirofacts ERNS
+    </div>
+
+    <div style="display:flex; justify-content:flex-end">
+      <button class="btn btn-primary" id="run-btn" onclick="runSearch()">Run Search</button>
+    </div>
+  </div>
+
+  <!-- ── RESULTS PANE ── -->
+  <div id="pane-results" style="display:none">
+    <div id="prog-wrap" style="display:none">
+      <div class="progress-wrap">
+        <div class="progress-label"><div class="spinner"></div><span id="prog-msg">Querying databases...</span></div>
+        <div class="progress-track"><div class="progress-bar" id="prog-bar" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <div id="results-body" style="display:none">
+      <div class="summary">
+        <div class="sum-card"><div class="sum-val" id="s-total">—</div><div class="sum-lbl">total sites</div></div>
+        <div class="sum-card"><div class="sum-val" id="s-nc" style="color:var(--danger)">—</div><div class="sum-lbl">non-compliant</div></div>
+        <div class="sum-card"><div class="sum-val" id="s-dbs">—</div><div class="sum-lbl">databases with hits</div></div>
+      </div>
+
+      <div id="error-area" style="display:none"></div>
+      <div id="db-list"></div>
+
+      <hr class="divider"/>
+
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px">
+        <div>
+          <div class="field-label" style="margin-bottom:4px">Manual non-compliant overrides</div>
+          <div style="font-size:0.78rem; color:var(--text3)">Add sites not auto-detected or correct auto-flags</div>
+        </div>
+        <button class="btn" onclick="addNC()">+ Add site</button>
+      </div>
+      <div id="nc-list"><p style="font-size:0.8rem;color:var(--text3);font-style:italic;font-family:var(--mono)">No manual overrides.</p></div>
+
+      <div style="display:flex; justify-content:space-between; margin-top:1.5rem">
+        <button class="btn" onclick="runSearch()">↺ Re-run</button>
+        <button class="btn btn-primary" onclick="buildReport()">Generate report →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── REPORT PANE ── -->
+  <div id="pane-report" style="display:none">
+    <div id="rep-empty" class="empty">
+      <div class="empty-icon">⬜</div>
+      Run a search first, then generate report.
+    </div>
+    <div id="rep-body" style="display:none">
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:12px">
+        <button class="btn" onclick="buildReport()">↺ Refresh</button>
+        <button class="btn" id="copy-btn" onclick="copyReport()">Copy report</button>
+      </div>
+      <div class="report-area" id="rep-text"></div>
+      <div class="report-footer">
+        <div class="report-note">Review all findings before submitting. Verify source citations match queried databases. Queried: <span id="query-date"></span></div>
+        <button class="btn" onclick="showTab('results')">← Edit results</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const PROXY = 'https://esa-proxy.onrender.com';
+
+const CFG = [
+  {id:'npl',      label:'NPL sites',                    group:'1mile', src:'EPA CIMC',   tmpl:'NPL sites',                        noC:false},
+  {id:'fuds',     label:'FUDS',                         group:'1mile', src:'USACE FUDS', tmpl:'FUDS',                             noC:false},
+  {id:'rcra_ca',  label:'RCRA corrective action sites', group:'1mile', src:'EPA ECHO',   tmpl:'RCRA corrective action sites',     noC:false},
+  {id:'npl_del',  label:'Delisted NPL sites',           group:'half',  src:'EPA CIMC',   tmpl:'delisted NPL sites',               noC:true},
+  {id:'cercla',   label:'CERCLA sites',                 group:'half',  src:'EPA CIMC',   tmpl:'CERCLA sites',                     noC:false},
+  {id:'rcra_tsd', label:'RCRA TSD facilities',          group:'half',  src:'EPA ECHO',   tmpl:'RCRA TSD facilities',              noC:false},
+  {id:'haz',      label:'Hazardous waste facilities',   group:'half',  src:'FDEP Nexus', tmpl:'hazardous waste facilities',       noC:false},
+  {id:'cont',     label:'Contamination sites',          group:'half',  src:'FDEP Nexus', tmpl:'contamination sites',              noC:false},
+  {id:'solid',    label:'Solid waste disposal sites',   group:'half',  src:'FDEP Nexus', tmpl:'solid waste disposal sites',       noC:false},
+  {id:'lust',     label:'Leaking USTs',                 group:'half',  src:'FDEP Nexus', tmpl:'leaking underground storage tanks',noC:false},
+  {id:'vol',      label:'Voluntary cleanup sites',      group:'half',  src:'FDEP Nexus', tmpl:'voluntary cleanup sites',          noC:false},
+  {id:'brown',    label:'Brownfields',                  group:'half',  src:'FDEP Nexus', tmpl:'brownfields',                      noC:false},
+  {id:'ust',      label:'Registered storage tanks',     group:'adj',   src:'FDEP Nexus', tmpl:'registered storage tanks',         noC:false},
+  {id:'rcra_gen', label:'RCRA generators',              group:'adj',   src:'EPA ECHO',   tmpl:'RCRA generators',                  noC:false},
+  {id:'ic',       label:'Institutional controls',       group:'prop',  src:'FDEP Nexus', tmpl:'institutional controls',           noC:false},
+  {id:'erns',     label:'ERNS release notifications',   group:'prop',  src:'EPA ECHO',   tmpl:'ERNS release notifications',       noC:false},
+];
+
+const GROUPS = [
+  {id:'1mile', label:'1-mile radius',        sub:'NPL · FUDS · RCRA corrective action'},
+  {id:'half',  label:'½-mile radius',         sub:'CERCLA · TSD · Hazardous waste · Contamination · Solid waste · LUST · Voluntary cleanup · Brownfields'},
+  {id:'adj',   label:'Adjoining property',    sub:'Registered storage tanks · RCRA generators'},
+  {id:'prop',  label:'Subject property only', sub:'Institutional controls · ERNS'},
+];
+
+let results = {}, ncManual = [], ncCtr = 0;
+
+function showTab(t) {
+  ['search','results','report'].forEach(id => {
+    document.getElementById('pane-'+id).style.display = id===t ? 'block' : 'none';
+    const tb = document.getElementById('tab-'+id);
+    tb.className = 'tab' + (id===t ? ' active' : '');
+  });
+}
+
+async function checkProxy() {
+  const dot = document.getElementById('proxy-dot');
+  const lbl = document.getElementById('proxy-label');
+  dot.className = 'dot';
+  lbl.textContent = 'checking...';
+  try {
+    const r = await fetch(PROXY+'/health', {signal: AbortSignal.timeout(10000)});
+    const d = await r.json();
+    if (d.status === 'ok') {
+      dot.className = 'dot live';
+      lbl.textContent = 'proxy connected';
+    } else throw new Error();
+  } catch {
+    dot.className = 'dot dead';
+    lbl.textContent = 'proxy unreachable — click to retry';
+  }
+}
+
+async function geocode() {
+  const addr = document.getElementById('addr').value.trim();
+  const msgEl = document.getElementById('geo-msg');
+  const btn = document.getElementById('geo-btn');
+  if (!addr) return;
+  btn.textContent = 'Looking up...'; btn.disabled = true;
+  msgEl.style.display = 'none';
+  try {
+    const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&q='+encodeURIComponent(addr)+'&limit=1', {headers:{'Accept-Language':'en'}});
+    const d = await r.json();
+    if (d && d.length) {
+      document.getElementById('lat').value = parseFloat(d[0].lat).toFixed(6);
+      document.getElementById('lng').value = parseFloat(d[0].lon).toFixed(6);
+      msgEl.textContent = '✓ ' + d[0].display_name;
+      msgEl.className = 'msg ok'; msgEl.style.display = 'block';
+    } else {
+      msgEl.textContent = 'Address not found — enter coordinates manually';
+      msgEl.className = 'msg err'; msgEl.style.display = 'block';
+    }
+  } catch {
+    msgEl.textContent = 'Geocoding failed — enter coordinates manually';
+    msgEl.className = 'msg err'; msgEl.style.display = 'block';
+  }
+  btn.textContent = 'Geocode →'; btn.disabled = false;
+}
+
+function setProg(msg, pct) {
+  document.getElementById('prog-msg').textContent = msg;
+  document.getElementById('prog-bar').style.width = pct + '%';
+}
+
+async function runSearch() {
+  const lat = parseFloat(document.getElementById('lat').value);
+  const lon = parseFloat(document.getElementById('lng').value);
+  const zip = document.getElementById('zip').value.trim();
+  if (!lat || !lon || isNaN(lat) || isNaN(lon)) {
+    alert('Please enter coordinates or geocode an address first.');
+    return;
+  }
+  showTab('results');
+  document.getElementById('prog-wrap').style.display = 'block';
+  document.getElementById('results-body').style.display = 'none';
+  setProg('Connecting to proxy...', 5);
+
+  const url = PROXY + '/query?lat=' + lat + '&lon=' + lon + (zip ? '&zip=' + zip : '');
+
+  try {
+    setProg('Querying all 16 ASTM databases...', 20);
+    const r = await fetch(url, {signal: AbortSignal.timeout(60000)});
+    if (!r.ok) throw new Error('Proxy returned HTTP ' + r.status);
+    setProg('Processing results...', 85);
+    results = await r.json();
+    setProg('Complete', 100);
+    setTimeout(() => {
+      document.getElementById('prog-wrap').style.display = 'none';
+      renderResults();
+      document.getElementById('results-body').style.display = 'block';
+    }, 400);
+  } catch(e) {
+    setProg('Error — ' + e.message, 0);
+    setTimeout(() => {
+      CFG.forEach(c => { results[c.id] = {count:0, sites:[], error:true}; });
+      results._error = e.message;
+      document.getElementById('prog-wrap').style.display = 'none';
+      renderResults();
+      document.getElementById('results-body').style.display = 'block';
+    }, 400);
+  }
+}
+
+function renderResults() {
+  const total = CFG.reduce((s,c) => s + (results[c.id]?.count||0), 0);
+  const autoNC = getAutoNC();
+  const dbs = CFG.filter(c => (results[c.id]?.count||0) > 0).length;
+
+  document.getElementById('s-total').textContent = total;
+  document.getElementById('s-nc').textContent = autoNC.length + ncManual.filter(x=>x.name).length;
+  document.getElementById('s-dbs').textContent = dbs;
+
+  const errArea = document.getElementById('error-area');
+  if (results._error) {
+    errArea.style.display = 'block';
+    errArea.innerHTML = `<div class="error-banner">Query error: ${results._error}<br>The proxy may be waking up — wait 30s and re-run. Or click the proxy pill to test the connection.</div>`;
+  } else { errArea.style.display = 'none'; }
+
+  let html = '';
+  GROUPS.forEach(g => {
+    const items = CFG.filter(c => c.group === g.id);
+    html += `<div class="group-label">${g.label} <span class="group-sub">${g.sub}</span></div>`;
+    html += '<div class="db-grid">';
+    items.forEach(item => {
+      const r = results[item.id] || {count:0, sites:[]};
+      const cnt = r.count || 0;
+      const ncCnt = (r.sites||[]).filter(s=>s.nc).length;
+      const hasErr = !!r.error;
+      const cardCls = hasErr ? 'db-card error' : ncCnt>0 ? 'db-card has-nc' : cnt>0 ? 'db-card hit' : 'db-card';
+      const countCls = hasErr ? 'db-count' : ncCnt>0 ? 'db-count nc' : cnt>0 ? 'db-count pos' : 'db-count';
+      const sid = 'sites-' + item.id;
+      html += `<div class="${cardCls}">
+        <div style="flex:1;min-width:0">
+          <div class="db-name">${item.label}</div>
+          <div class="db-src">${item.src}</div>
+          ${item.noC ? '<span class="badge badge-info">info only</span>' : ''}
+          ${!item.noC && ncCnt>0 ? `<span class="badge badge-nc">${ncCnt} non-compliant</span>` : ''}
+          ${cnt>0 ? `<button class="toggle-sites" onclick="toggleSites('${sid}',this)">${cnt>1?cnt+' sites':'1 site'} ▸</button>
+            <div id="${sid}" style="display:none" class="sites-list">
+              ${(r.sites||[]).map(s=>`<div class="site-row">
+                <div>
+                  <div class="site-name">${s.name}</div>
+                  <div class="site-status">${s.status||''}</div>
+                  ${s.nc&&!item.noC?'<span class="badge badge-nc">NC</span>':''}
+                </div>
+                <div class="site-dist">${(s.distance||0).toFixed(2)} mi</div>
+              </div>`).join('')}
+            </div>` : ''}
+        </div>
+        <div class="${countCls}">${hasErr?'!':cnt}</div>
+      </div>`;
+    });
+    html += '</div>';
+  });
+
+  document.getElementById('db-list').innerHTML = html;
+  renderNCList();
+}
+
+function toggleSites(id, btn) {
+  const el = document.getElementById(id);
+  const open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  const cnt = el.querySelectorAll('.site-row').length;
+  btn.textContent = (open ? cnt+(cnt>1?' sites':' site')+' ▸' : cnt+(cnt>1?' sites':' site')+' ▾');
+}
+
+function getAutoNC() {
+  const list = [];
+  CFG.filter(c=>!c.noC).forEach(c => {
+    (results[c.id]?.sites||[]).filter(s=>s.nc).forEach(s => {
+      list.push({name:s.name, distance:s.distance||0});
+    });
+  });
+  return list;
+}
+
+function addNC() { ncManual.push({id:++ncCtr, name:'', distance:''}); renderNCList(); }
+function removeNC(id) { ncManual = ncManual.filter(x=>x.id!==id); renderNCList(); }
+function updateNC(id, f, v) { const x = ncManual.find(x=>x.id===id); if(x) x[f]=v; }
+
+function renderNCList() {
+  const el = document.getElementById('nc-list');
+  if (!ncManual.length) {
+    el.innerHTML = '<p style="font-size:0.8rem;color:var(--text3);font-style:italic;font-family:var(--mono)">No manual overrides.</p>';
+    return;
+  }
+  el.innerHTML = ncManual.map(s=>`
+    <div class="nc-row">
+      <input type="text" placeholder="Facility name" value="${s.name}" onchange="updateNC(${s.id},'name',this.value)"/>
+      <input type="number" step="0.01" min="0" placeholder="miles" value="${s.distance}" onchange="updateNC(${s.id},'distance',parseFloat(this.value)||0)" style="font-family:var(--mono)"/>
+      <button class="btn btn-icon" onclick="removeNC(${s.id})" style="color:var(--danger)">✕</button>
+    </div>`).join('');
+}
+
+function fmtList(arr) {
+  if (!arr.length) return null;
+  if (arr.length===1) return arr[0];
+  if (arr.length===2) return arr[0]+' or '+arr[1];
+  return arr.slice(0,-1).join(', ')+', or '+arr[arr.length-1];
+}
+
+function buildReport() {
+  const c1 = CFG.filter(c=>c.group==='1mile'&&(results[c.id]?.count||0)===0).map(c=>c.tmpl);
+  const cH = CFG.filter(c=>c.group==='half'&&(results[c.id]?.count||0)===0).map(c=>c.tmpl);
+  const cA = CFG.filter(c=>(c.group==='adj'||c.group==='prop')&&(results[c.id]?.count||0)===0).map(c=>c.tmpl);
+
+  const clauses = [];
+  if (c1.length) clauses.push('no '+fmtList(c1)+' within one mile of the home');
+  if (cH.length) clauses.push('no '+fmtList(cH)+' within half a mile of the home');
+  if (cA.length) clauses.push('no '+fmtList(cA)+' located on the property or on an adjoining property');
+
+  const p1 = "According to the Environmental Protection Agency's (EPA) Cleanups in My Community (CIMC) data, U.S. Army Corps of Engineers (USACE) Formerly Used Defense Sites (FUDS), EPA Enforcement and Compliance History Online (ECHO), and Florida Department of Environmental Protection (FDEP) geospatial data, there are "+(clauses.length?clauses.join('; '):'findings identified across all searched categories — see below')+".";
+
+  const total = CFG.reduce((s,c)=>s+(results[c.id]?.count||0),0);
+  const p2 = "As identified by the same sources, there are "+total+" state or federally monitored contamination sites located within the applicable search parameters of the project site.";
+
+  const usedSrc = new Set();
+  CFG.forEach(c=>{ if((results[c.id]?.count||0)>0) usedSrc.add(c.src); });
+  if (!usedSrc.size) ['EPA CIMC','USACE FUDS','EPA ECHO','FDEP Nexus'].forEach(x=>usedSrc.add(x));
+
+  const allNC = [...getAutoNC(), ...ncManual.filter(x=>x.name)];
+  let p3;
+  if (!allNC.length) {
+    p3 = "As reported by documents obtained from "+[...usedSrc].join(' / ')+", all facilities are actively within compliance.";
+  } else {
+    const bullets = allNC.map(s=>"\u00b7    "+s.name+" located approximately "+parseFloat(s.distance||0).toFixed(2)+" miles from the proposed project").join('\n');
+    p3 = "As reported by documents obtained from "+[...usedSrc].join(' / ')+", the following sites are the only sites not actively within compliance:\n"+bullets;
+  }
+
+  document.getElementById('rep-text').textContent = p1+"\n\n"+p2+"\n\n"+p3;
+  document.getElementById('query-date').textContent = new Date().toLocaleDateString();
+  document.getElementById('rep-empty').style.display = 'none';
+  document.getElementById('rep-body').style.display = 'block';
+  showTab('report');
+}
+
+function copyReport() {
+  navigator.clipboard.writeText(document.getElementById('rep-text').textContent).then(()=>{
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = '✓ Copied!';
+    setTimeout(()=>{ btn.textContent = 'Copy report'; }, 2000);
+  });
+}
+
+checkProxy();
+</script>
+</body>
+</html>
