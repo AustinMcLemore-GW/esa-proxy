@@ -1,13 +1,12 @@
 """
-Phase I ESA Database Proxy — v3
-Fixes: FDEP coordinate projection (WGS84 → EPSG:3086 Albers), correct field names,
-correct service URLs, fixed SEMS/CERCLA endpoint, corrected NC status logic.
+Phase I ESA Database Proxy — v4
+Uses verified FDEP layer 0 with correct field names from live API inspection.
+Sends inSR=4326 so ArcGIS server handles the projection internally.
 """
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-import requests
-import math
+import requests, math
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app)
@@ -20,299 +19,213 @@ def index():
 
 def haversine(lat1, lon1, lat2, lon2):
     R = 3958.8
-    d_lat = math.radians(lat2 - lat1)
-    d_lon = math.radians(lon2 - lon1)
-    a = math.sin(d_lat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(d_lon/2)**2
-    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1))*math.cos(math.radians(lat2))*math.sin(dlon/2)**2
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
-# ── WGS84 → Florida GDL Albers (EPSG:3086) ───────────────────────────────────
-# Manual forward projection so we don't need pyproj on Render free tier
+# ── Generic ArcGIS spatial query (WGS84 in, WGS84 out) ───────────────────────
 
-def wgs84_to_albers_fl(lat_deg, lon_deg):
+def arcgis_query(url, lat, lon, radius_miles, where="1=1", out_fields="*"):
     """
-    Project WGS84 lat/lon to NAD83 Florida GDL Albers (EPSG:3086).
-    Parameters: std parallel 1=24, std parallel 2=31.5, central meridian=-84,
-    lat of origin=24, false easting=400000, false northing=0.
-    Close enough for a radius search buffer.
+    Spatial query against any ArcGIS MapServer/FeatureServer layer.
+    Sends coordinates in WGS84 (inSR=4326); server reprojects internally.
     """
-    a = 6378137.0
-    f = 1 / 298.257222101
-    e2 = 2*f - f*f
-    e = math.sqrt(e2)
-
-    phi1 = math.radians(24.0)
-    phi2 = math.radians(31.5)
-    phi0 = math.radians(24.0)
-    lam0 = math.radians(-84.0)
-    FE = 400000.0
-    FN = 0.0
-
-    phi = math.radians(lat_deg)
-    lam = math.radians(lon_deg)
-
-    def m(phi_r):
-        s = math.sin(phi_r)
-        return math.cos(phi_r) / math.sqrt(1 - e2 * s*s)
-
-    def q(phi_r):
-        s = math.sin(phi_r)
-        return (1-e2) * (s/(1-e2*s*s) - (1/(2*e)) * math.log((1-e*s)/(1+e*s)))
-
-    m1 = m(phi1); m2 = m(phi2)
-    q0 = q(phi0); q1 = q(phi1); q2 = q(phi2); qp = q(phi)
-
-    n = (m1*m1 - m2*m2) / (q2 - q1)
-    C = m1*m1 + n*q1
-    rho0 = a * math.sqrt(C - n*q0) / n
-
-    rho = a * math.sqrt(C - n*qp) / n
-    theta = n * (lam - lam0)
-
-    x = FE + rho * math.sin(theta)
-    y = FN + rho0 - rho * math.cos(theta)
-    return x, y
-
-# ── FDEP ArcGIS spatial query helper ─────────────────────────────────────────
-
-def fdep_query(service_url, lat, lon, radius_miles, where_clause="1=1", out_fields="*"):
-    """
-    Query FDEP ArcGIS layer using projected coordinates (EPSG:3086).
-    FDEP services use Florida GDL Albers — must project before querying.
-    """
-    x, y = wgs84_to_albers_fl(lat, lon)
-    radius_meters = radius_miles * 1609.34
+    radius_m = radius_miles * 1609.34
     params = {
-        "geometry": f"{x},{y}",
+        "geometry":     f"{lon},{lat}",
         "geometryType": "esriGeometryPoint",
-        "spatialRel": "esriSpatialRelIntersects",
-        "distance": radius_meters,
-        "inSR": "3086",
-        "outSR": "4326",   # return in WGS84 so we can compute haversine
-        "where": where_clause,
-        "outFields": out_fields,
+        "spatialRel":   "esriSpatialRelIntersects",
+        "distance":     radius_m,
+        "units":        "esriSRUnit_Meter",
+        "inSR":         "4326",
+        "outSR":        "4326",
+        "where":        where,
+        "outFields":    out_fields,
         "returnGeometry": "true",
-        "f": "json"
+        "f":            "json",
     }
     try:
-        r = requests.get(service_url, params=params, timeout=15)
+        r = requests.get(url, params=params, timeout=15)
         r.raise_for_status()
         return r.json()
     except Exception as e:
         return {"error": str(e), "features": []}
 
-def extract_fdep_sites(data, lat, lon, name_field, status_field=None, nc_statuses=None):
+def parse_features(data, lat, lon, name_field, status_field=None, nc_statuses=None):
     sites = []
-    for feature in data.get("features", []):
-        attrs = feature.get("attributes", {})
-        geom  = feature.get("geometry", {})
-        name  = attrs.get(name_field) or "Unknown Site"
+    for feat in data.get("features", []):
+        attrs = feat.get("attributes", {})
+        geom  = feat.get("geometry", {})
+        name  = str(attrs.get(name_field) or "Unknown")
         dist  = 999.0
         if geom and "x" in geom and "y" in geom:
-            dist = round(haversine(lat, lon, geom["y"], geom["x"]), 2)
+            try:
+                dist = round(haversine(lat, lon, float(geom["y"]), float(geom["x"])), 2)
+            except Exception:
+                pass
         status = str(attrs.get(status_field, "") or "") if status_field else ""
         nc = bool(nc_statuses and status in nc_statuses)
-        sites.append({"name": str(name), "distance": dist, "status": status, "nc": nc})
+        sites.append({"name": name, "distance": dist, "status": status, "nc": nc})
     sites.sort(key=lambda s: s["distance"])
     return sites
 
-# ── FDEP service URLs (verified) ──────────────────────────────────────────────
+# ── Verified FDEP service URLs ────────────────────────────────────────────────
 
-FDEP_ERIC  = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CLEANUP_SP/MapServer/8/query"
-FDEP_CHAZ  = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CHAZ/MapServer/0/query"
-FDEP_STCM_LUST = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/DWM_STCM/MapServer/2/query"   # PCTS discharges = leaking tanks
-FDEP_STCM_UST  = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/DWM_STCM/MapServer/1/query"   # Registered tanks
-FDEP_SOLID = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/SolidWaste_SP/MapServer/0/query"
-FDEP_BROWN = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CLEANUP_SP/MapServer/8/query"     # Brownfields filtered from ERIC
-FDEP_IC    = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/ICR_SP/MapServer/0/query"
+# DEP Cleanup Sites (layer 0) — the unified cleanup database
+# Fields: BUSINESS_NAME, RSC2_REMEDIATION_STATUS_KEY, CLCC_CLEANUP_CATEGORY_KEY, SOURCE_DATABASE_NAME
+DEP_CLEANUP = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CLEANUP_SP/MapServer/0/query"
 
-# FDEP PROGRAM_STATUS values that mean NOT complete (trigger NC bullet)
-FDEP_NC_STATUSES = {"ACTIVE", "AWAITFUND", "AWAITSITEACCESS", "INPROCESS", "ELIGREVIEW"}
+# CHAZ (layer 0) — all hazardous waste facilities
+# Fields: FAC_NAME, FAC_STATUS, FAC_INS_TYPE
+CHAZ_ALL = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CHAZ/MapServer/0/query"
 
-# ── EPA ECHO RCRA helper ───────────────────────────────────────────────────────
+# STCM — registered tanks (layer 1) and PCTS discharges/leaking (layer 2)
+STCM_TANKS = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/DWM_STCM/MapServer/1/query"
+STCM_LUST  = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/DWM_STCM/MapServer/2/query"
 
-def echo_rcra_query(lat, lon, radius_miles, handler_types):
-    url = "https://echodata.epa.gov/echo/rcra_rest_services.get_facility_info"
+# Solid Waste
+SOLID_WASTE = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/SolidWaste_SP/MapServer/0/query"
+
+# ICR — institutional controls (from DWM_WASTE_ICR_BACKG layer 12)
+ICR = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/DWM_WASTE_ICR_BACKG/MapServer/12/query"
+
+# DEP Cleanup RSC2 status codes that mean NOT complete → trigger NC bullet
+# RSC2_REMEDIATION_STATUS_KEY values (from DEP Cleanup Sites layer 0)
+DEP_NC_STATUSES = {
+    "SRCO",      # Site Rehabilitation Completion Order not yet issued
+    "ISSA",      # Initial Site Assessment
+    "SSA",       # Site Status Assessment
+    "PA",        # Preliminary Assessment
+    "SI",        # Site Investigation
+    "RI",        # Remedial Investigation
+    "FS",        # Feasibility Study
+    "RD",        # Remedial Design
+    "RA",        # Remedial Action
+    "OAM",       # Operation, Maintenance & Monitoring
+    "OPEN",      # Open
+    "ACTIVE",
+    "INPROCESS",
+    "AWAITFUND",
+    "AWAITSITEACCESS",
+    "ELIGREVIEW",
+}
+
+# ── EPA ECHO RCRA ─────────────────────────────────────────────────────────────
+
+def echo_rcra(lat, lon, radius_miles, handler_types):
     params = {
         "output": "JSON",
-        "p_lat": lat,
-        "p_lon": lon,
+        "p_lat": lat, "p_lon": lon,
         "p_radius_mi": radius_miles,
         "p_htype": handler_types,
-        "qcolumns": "1,2,3,4,5,6,38,39,40"
+        "qcolumns": "1,2,3,4,5,6,38,39,40",
     }
     try:
-        r = requests.get(url, params=params, timeout=15)
+        r = requests.get("https://echodata.epa.gov/echo/rcra_rest_services.get_facility_info",
+                         params=params, timeout=15)
         r.raise_for_status()
-        data = r.json()
-        facilities = data.get("Results", {}).get("Facilities", [])
+        facilities = r.json().get("Results", {}).get("Facilities", [])
         sites = []
         for f in facilities:
-            name    = f.get("FacName", "Unknown")
-            fac_lat = float(f.get("FacLat",  0) or 0)
-            fac_lon = float(f.get("FacLong", 0) or 0)
-            dist    = round(haversine(lat, lon, fac_lat, fac_lon), 2) if fac_lat else 999.0
-            status  = f.get("RCRAComplianceStatus", "") or ""
-            # CA facilities: NC if not "No Violation Identified"
-            nc = ("CA" in handler_types) and (status not in ["No Violation Identified", ""])
+            name = f.get("FacName", "Unknown")
+            flat = float(f.get("FacLat",  0) or 0)
+            flon = float(f.get("FacLong", 0) or 0)
+            dist = round(haversine(lat, lon, flat, flon), 2) if flat else 999.0
+            status = f.get("RCRAComplianceStatus", "") or ""
+            nc = "CA" in handler_types and status not in ["No Violation Identified", ""]
             sites.append({"name": name, "distance": dist, "status": status, "nc": nc})
         sites.sort(key=lambda s: s["distance"])
         return {"count": len(sites), "sites": sites}
     except Exception as e:
         return {"count": 0, "sites": [], "error": str(e)}
 
-# ── EPA FRS/SEMS NPL helper ───────────────────────────────────────────────────
+# ── EPA FRS NPL ───────────────────────────────────────────────────────────────
 
-def frs_npl_query(lat, lon, radius_miles, npl_status_filter=None):
-    radius_meters = radius_miles * 1609.34
-    url = "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/21/query"
-    params = {
-        "geometry": f"{lon},{lat}",
-        "geometryType": "esriGeometryPoint",
-        "spatialRel": "esriSpatialRelIntersects",
-        "distance": radius_meters,
-        "inSR": "4326",
-        "outSR": "4326",
-        "outFields": "PRIMARY_NAME,NPL_STATUS_NAME,LATITUDE83,LONGITUDE83",
-        "returnGeometry": "true",
-        "f": "json"
-    }
-    try:
-        r = requests.get(url, params=params, timeout=15)
-        r.raise_for_status()
-        data = r.json()
-        sites = []
-        for feature in data.get("features", []):
-            attrs      = feature.get("attributes", {})
-            geom       = feature.get("geometry", {})
-            npl_status = attrs.get("NPL_STATUS_NAME", "") or ""
-            if npl_status_filter and npl_status not in npl_status_filter:
-                continue
-            name    = attrs.get("PRIMARY_NAME", "Unknown") or "Unknown"
-            fac_lat = float(attrs.get("LATITUDE83",  0) or geom.get("y", 0))
-            fac_lon = float(attrs.get("LONGITUDE83", 0) or geom.get("x", 0))
-            dist    = round(haversine(lat, lon, fac_lat, fac_lon), 2) if fac_lat else 999.0
-            nc      = npl_status in ["Currently on the Final NPL", "Proposed for NPL"]
-            sites.append({"name": name, "distance": dist, "status": npl_status, "nc": nc})
-        sites.sort(key=lambda s: s["distance"])
-        return {"count": len(sites), "sites": sites}
-    except Exception as e:
-        return {"count": 0, "sites": [], "error": str(e)}
+def frs_npl(lat, lon, radius_miles, status_filter=None):
+    data = arcgis_query(
+        "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/21/query",
+        lat, lon, radius_miles,
+        out_fields="PRIMARY_NAME,NPL_STATUS_NAME,LATITUDE83,LONGITUDE83"
+    )
+    sites = []
+    for feat in data.get("features", []):
+        attrs = feat.get("attributes", {})
+        geom  = feat.get("geometry", {})
+        status = attrs.get("NPL_STATUS_NAME", "") or ""
+        if status_filter and status not in status_filter:
+            continue
+        name = attrs.get("PRIMARY_NAME", "Unknown") or "Unknown"
+        flat = float(attrs.get("LATITUDE83",  0) or geom.get("y", 0))
+        flon = float(attrs.get("LONGITUDE83", 0) or geom.get("x", 0))
+        dist = round(haversine(lat, lon, flat, flon), 2) if flat else 999.0
+        nc   = status in ["Currently on the Final NPL", "Proposed for NPL"]
+        sites.append({"name": name, "distance": dist, "status": status, "nc": nc})
+    sites.sort(key=lambda s: s["distance"])
+    return {"count": len(sites), "sites": sites}
 
-# ── SEMS CERCLA/NFRAP helper ──────────────────────────────────────────────────
+# ── USACE FUDS ────────────────────────────────────────────────────────────────
 
-def sems_cercla_query(lat, lon, radius_miles):
-    """
-    Query SEMS for active non-NPL CERCLA sites in FL via Envirofacts.
-    Uses the CERCLA non-NPL FRS layer (NASA HIFLD mirror).
-    Falls back to Envirofacts efservice if primary fails.
-    """
-    radius_meters = radius_miles * 1609.34
-    # Try FRS CERCLA non-NPL ArcGIS layer first
-    url = "https://services.arcgis.com/cJ9YHowT8TU7DUyn/arcgis/rest/services/FRS_INTERESTS/FeatureServer/3/query"
-    params = {
-        "geometry": f"{lon},{lat}",
-        "geometryType": "esriGeometryPoint",
-        "spatialRel": "esriSpatialRelIntersects",
-        "distance": radius_meters,
-        "inSR": "4326",
-        "outSR": "4326",
-        "outFields": "PRIMARY_NAME,LATITUDE83,LONGITUDE83,ACTIVE_STATUS",
-        "returnGeometry": "true",
-        "f": "json"
-    }
-    try:
-        r = requests.get(url, params=params, timeout=15)
-        r.raise_for_status()
-        data = r.json()
-        if "error" not in data:
-            sites = []
-            for feature in data.get("features", []):
-                attrs   = feature.get("attributes", {})
-                geom    = feature.get("geometry", {})
-                name    = attrs.get("PRIMARY_NAME", "Unknown CERCLA Site") or "Unknown CERCLA Site"
-                fac_lat = float(attrs.get("LATITUDE83",  0) or geom.get("y", 0))
-                fac_lon = float(attrs.get("LONGITUDE83", 0) or geom.get("x", 0))
-                dist    = round(haversine(lat, lon, fac_lat, fac_lon), 2) if fac_lat else 999.0
-                status  = attrs.get("ACTIVE_STATUS", "Active") or "Active"
-                nc      = status.upper() not in ["ARCHIVED", "INACTIVE", "NFRAP"]
-                sites.append({"name": name, "distance": dist, "status": status, "nc": nc})
-            sites.sort(key=lambda s: s["distance"])
-            return {"count": len(sites), "sites": sites}
-    except Exception:
-        pass
+def fuds(lat, lon, radius_miles):
+    data = arcgis_query(
+        "https://services7.arcgis.com/n1YM8pTrFmm7L4hs/arcgis/rest/services/FUDS_Projects/FeatureServer/0/query",
+        lat, lon, radius_miles,
+        out_fields="PROJECT_NAME,PROJECT_STATUS,LATITUDE,LONGITUDE"
+    )
+    sites = []
+    for feat in data.get("features", []):
+        attrs  = feat.get("attributes", {})
+        geom   = feat.get("geometry", {})
+        name   = attrs.get("PROJECT_NAME", "Unknown FUDS") or "Unknown FUDS"
+        status = attrs.get("PROJECT_STATUS", "") or ""
+        flat   = float(attrs.get("LATITUDE",  0) or geom.get("y", 0))
+        flon   = float(attrs.get("LONGITUDE", 0) or geom.get("x", 0))
+        dist   = round(haversine(lat, lon, flat, flon), 2) if flat else 999.0
+        nc     = status.upper() not in {"CLOSED", "COMPLETE", "NO FURTHER ACTION", "NFA"}
+        sites.append({"name": name, "distance": dist, "status": status, "nc": nc})
+    sites.sort(key=lambda s: s["distance"])
+    return {"count": len(sites), "sites": sites}
 
-    # Fallback: Envirofacts SEMS by county (approximate)
-    try:
-        url2 = "https://data.epa.gov/efservice/SEMS_ACTIVE_SITES/STATE_CODE/FL/rows/0:500/JSON"
-        r2 = requests.get(url2, timeout=15)
-        r2.raise_for_status()
-        data2 = r2.json()
-        sites = []
-        for record in data2:
-            site_lat = float(record.get("LATITUDE", 0) or 0)
-            site_lon = float(record.get("LONGITUDE", 0) or 0)
-            if not site_lat or not site_lon:
-                continue
-            dist = haversine(lat, lon, site_lat, site_lon)
-            if dist <= radius_miles:
-                name = record.get("SITE_NAME", "Unknown") or "Unknown"
-                sites.append({"name": name, "distance": round(dist, 2), "status": "Active CERCLA", "nc": True})
-        sites.sort(key=lambda s: s["distance"])
-        return {"count": len(sites), "sites": sites}
-    except Exception as e:
-        return {"count": 0, "sites": [], "error": str(e)}
+# ── CERCLA (FRS non-NPL) ──────────────────────────────────────────────────────
 
-# ── ERNS helper ───────────────────────────────────────────────────────────────
+def cercla(lat, lon, radius_miles):
+    # FRS CERCLA non-NPL sites via EPA ArcGIS Hub
+    data = arcgis_query(
+        "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/22/query",
+        lat, lon, radius_miles,
+        out_fields="PRIMARY_NAME,ACTIVE_STATUS,LATITUDE83,LONGITUDE83"
+    )
+    if "error" in data:
+        return {"count": 0, "sites": [], "error": data["error"]}
+    sites = []
+    for feat in data.get("features", []):
+        attrs  = feat.get("attributes", {})
+        geom   = feat.get("geometry", {})
+        name   = attrs.get("PRIMARY_NAME", "Unknown") or "Unknown"
+        status = attrs.get("ACTIVE_STATUS", "") or ""
+        flat   = float(attrs.get("LATITUDE83",  0) or geom.get("y", 0))
+        flon   = float(attrs.get("LONGITUDE83", 0) or geom.get("x", 0))
+        dist   = round(haversine(lat, lon, flat, flon), 2) if flat else 999.0
+        nc     = status.upper() not in {"ARCHIVED", "INACTIVE", "NFRAP", "DELETED"}
+        sites.append({"name": name, "distance": dist, "status": status, "nc": nc})
+    sites.sort(key=lambda s: s["distance"])
+    return {"count": len(sites), "sites": sites}
 
-def erns_query(zipcode):
+# ── ERNS ──────────────────────────────────────────────────────────────────────
+
+def erns(zipcode):
     if not zipcode:
-        return {"count": 0, "sites": [], "note": "ZIP not provided"}
-    url = f"https://data.epa.gov/efservice/ERNS_INCIDENTS/ZIP_CODE/{zipcode}/rows/0:100/JSON"
+        return {"count": 0, "sites": [], "note": "ZIP not provided — skipped"}
     try:
+        url = f"https://data.epa.gov/efservice/ERNS_INCIDENTS/ZIP_CODE/{zipcode}/rows/0:100/JSON"
         r = requests.get(url, timeout=15)
         r.raise_for_status()
         data = r.json()
-        sites = []
-        for record in data:
-            name = record.get("FACILITY_NAME") or record.get("COMPANY_NAME") or "ERNS Incident"
-            incident = record.get("INCIDENT_TYPE_DESCRIPTION", "") or ""
-            sites.append({"name": name, "distance": 0.0, "status": incident, "nc": True})
-        return {"count": len(sites), "sites": sites}
-    except Exception as e:
-        return {"count": 0, "sites": [], "error": str(e)}
-
-# ── USACE FUDS helper ─────────────────────────────────────────────────────────
-
-def fuds_query(lat, lon, radius_miles):
-    radius_meters = radius_miles * 1609.34
-    url = "https://services7.arcgis.com/n1YM8pTrFmm7L4hs/arcgis/rest/services/FUDS_Projects/FeatureServer/0/query"
-    params = {
-        "geometry": f"{lon},{lat}",
-        "geometryType": "esriGeometryPoint",
-        "spatialRel": "esriSpatialRelIntersects",
-        "distance": radius_meters,
-        "inSR": "4326",
-        "outSR": "4326",
-        "outFields": "PROJECT_NAME,PROJECT_STATUS,LATITUDE,LONGITUDE",
-        "returnGeometry": "true",
-        "f": "json"
-    }
-    try:
-        r = requests.get(url, params=params, timeout=15)
-        r.raise_for_status()
-        data = r.json()
-        sites = []
-        for feature in data.get("features", []):
-            attrs   = feature.get("attributes", {})
-            geom    = feature.get("geometry", {})
-            name    = attrs.get("PROJECT_NAME", "Unknown FUDS") or "Unknown FUDS"
-            status  = attrs.get("PROJECT_STATUS", "") or ""
-            fac_lat = float(attrs.get("LATITUDE",  0) or geom.get("y", 0))
-            fac_lon = float(attrs.get("LONGITUDE", 0) or geom.get("x", 0))
-            dist    = round(haversine(lat, lon, fac_lat, fac_lon), 2) if fac_lat else 999.0
-            nc      = status.upper() not in ["CLOSED", "COMPLETE", "NO FURTHER ACTION", "NFA"]
-            sites.append({"name": name, "distance": dist, "status": status, "nc": nc})
-        sites.sort(key=lambda s: s["distance"])
+        sites = [{"name": rec.get("FACILITY_NAME") or rec.get("COMPANY_NAME") or "ERNS Incident",
+                  "distance": 0.0,
+                  "status":   rec.get("INCIDENT_TYPE_DESCRIPTION", "") or "",
+                  "nc": True}
+                 for rec in data]
         return {"count": len(sites), "sites": sites}
     except Exception as e:
         return {"count": 0, "sites": [], "error": str(e)}
@@ -325,108 +238,101 @@ def query():
         lat = float(request.args.get("lat"))
         lon = float(request.args.get("lon"))
     except (TypeError, ValueError):
-        return jsonify({"error": "lat and lon are required numeric parameters"}), 400
-
+        return jsonify({"error": "lat and lon are required"}), 400
     zipcode = request.args.get("zip", "")
-    results = {}
+    res = {}
 
     # ── 1-mile ────────────────────────────────────────────────────────────────
-    results["npl"]     = frs_npl_query(lat, lon, 1.0,
-                            npl_status_filter=["Currently on the Final NPL", "Proposed for NPL"])
-    results["fuds"]    = fuds_query(lat, lon, 1.0)
-    results["rcra_ca"] = echo_rcra_query(lat, lon, 1.0, "CA")
+    res["npl"]     = frs_npl(lat, lon, 1.0,
+                         status_filter=["Currently on the Final NPL", "Proposed for NPL"])
+    res["fuds"]    = fuds(lat, lon, 1.0)
+    res["rcra_ca"] = echo_rcra(lat, lon, 1.0, "CA")
 
     # ── 0.5-mile ──────────────────────────────────────────────────────────────
-    delisted = frs_npl_query(lat, lon, 0.5,
-                   npl_status_filter=["Deleted from the Final NPL"])
+    delisted = frs_npl(lat, lon, 0.5, status_filter=["Deleted from the Final NPL"])
     for s in delisted.get("sites", []):
-        s["nc"] = False   # informational only
-    results["npl_del"] = delisted
+        s["nc"] = False
+    res["npl_del"] = delisted
 
-    results["cercla"] = sems_cercla_query(lat, lon, 0.5)
+    res["cercla"]   = cercla(lat, lon, 0.5)
+    res["rcra_tsd"] = echo_rcra(lat, lon, 0.5, "TSD")
 
-    results["rcra_tsd"] = echo_rcra_query(lat, lon, 0.5, "TSD")
+    # CHAZ — all hazardous waste facilities (layer 0)
+    chaz_data  = arcgis_query(CHAZ_ALL, lat, lon, 0.5,
+                     out_fields="FAC_NAME,FAC_STATUS,FAC_INS_TYPE")
+    chaz_sites = parse_features(chaz_data, lat, lon, "FAC_NAME",
+                     status_field="FAC_STATUS", nc_statuses={"ACTIVE", "Active"})
+    res["haz"] = {"count": len(chaz_sites), "sites": chaz_sites}
 
-    # FDEP CHAZ — all hazardous waste facilities (layer 0 = all CHAZ facilities)
-    chaz_data  = fdep_query(FDEP_CHAZ, lat, lon, 0.5, out_fields="FAC_NAME,FAC_STATUS,FAC_INS_TYPE")
-    chaz_sites = extract_fdep_sites(chaz_data, lat, lon,
-                     name_field="FAC_NAME",
-                     status_field="FAC_STATUS",
-                     nc_statuses={"ACTIVE"})
-    results["haz"] = {"count": len(chaz_sites), "sites": chaz_sites}
+    # DEP Cleanup Sites layer 0 — contamination (excl brownfields, petroleum, drycleaning)
+    cont_data  = arcgis_query(DEP_CLEANUP, lat, lon, 0.5,
+                     where="CLCC_CLEANUP_CATEGORY_KEY NOT IN ('BROWN','PETRO')",
+                     out_fields="BUSINESS_NAME,RSC2_REMEDIATION_STATUS_KEY,CLCC_CLEANUP_CATEGORY_KEY,SOURCE_DATABASE_NAME")
+    cont_sites = parse_features(cont_data, lat, lon, "BUSINESS_NAME",
+                     status_field="RSC2_REMEDIATION_STATUS_KEY",
+                     nc_statuses=DEP_NC_STATUSES)
+    res["cont"] = {"count": len(cont_sites), "sites": cont_sites}
 
-    # FDEP ERIC contamination sites (excl. brownfields, drycleaning, petroleum which get own categories)
-    cont_data  = fdep_query(FDEP_ERIC, lat, lon, 0.5,
-                     where_clause="PROGRAM_TYPE IN ('RESPONSPARTY','STATE','SIS','RCRA','CERCLA','FEDERAL','NPL','SRP','SOLCP')",
-                     out_fields="SITE_NAME,PROGRAM_STATUS,PROGRAM_TYPE,SITE_STATUS")
-    cont_sites = extract_fdep_sites(cont_data, lat, lon,
-                     name_field="SITE_NAME",
-                     status_field="PROGRAM_STATUS",
-                     nc_statuses=FDEP_NC_STATUSES)
-    results["cont"] = {"count": len(cont_sites), "sites": cont_sites}
-
-    # FDEP Solid Waste
-    solid_data  = fdep_query(FDEP_SOLID, lat, lon, 0.5, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_TYPE")
-    solid_sites = extract_fdep_sites(solid_data, lat, lon,
-                      name_field="FACILITY_NAME",
+    # Solid Waste
+    solid_data  = arcgis_query(SOLID_WASTE, lat, lon, 0.5,
+                      out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_TYPE")
+    solid_sites = parse_features(solid_data, lat, lon, "FACILITY_NAME",
                       status_field="FACILITY_STATUS",
-                      nc_statuses={"ACTIVE", "OPEN"})
-    results["solid"] = {"count": len(solid_sites), "sites": solid_sites}
+                      nc_statuses={"ACTIVE", "OPEN", "Active", "Open"})
+    res["solid"] = {"count": len(solid_sites), "sites": solid_sites}
 
-    # FDEP Leaking USTs — PCTS petroleum discharge sites (layer 2)
-    lust_data  = fdep_query(FDEP_STCM_LUST, lat, lon, 0.5, out_fields="SITE_NAME,SITE_STATUS,DISCHARGE_DATE")
-    lust_sites = extract_fdep_sites(lust_data, lat, lon,
-                     name_field="SITE_NAME",
+    # Leaking USTs — PCTS discharges layer 2
+    lust_data  = arcgis_query(STCM_LUST, lat, lon, 0.5,
+                     out_fields="SITE_NAME,SITE_STATUS,DISCHARGE_DATE")
+    lust_sites = parse_features(lust_data, lat, lon, "SITE_NAME",
                      status_field="SITE_STATUS",
-                     nc_statuses={"OPEN", "ACTIVE", "INPROCESS"})
-    results["lust"] = {"count": len(lust_sites), "sites": lust_sites}
+                     nc_statuses={"OPEN", "ACTIVE", "Active", "Open"})
+    res["lust"] = {"count": len(lust_sites), "sites": lust_sites}
 
-    # FDEP Voluntary cleanup — drycleaning + petroleum restoration from ERIC
-    vol_data  = fdep_query(FDEP_ERIC, lat, lon, 0.5,
-                    where_clause="PROGRAM_TYPE IN ('DRYCLEANING','PETROLEUM')",
-                    out_fields="SITE_NAME,PROGRAM_STATUS,PROGRAM_TYPE")
-    vol_sites = extract_fdep_sites(vol_data, lat, lon,
-                    name_field="SITE_NAME",
-                    status_field="PROGRAM_STATUS",
-                    nc_statuses=FDEP_NC_STATUSES)
-    results["vol"] = {"count": len(vol_sites), "sites": vol_sites}
+    # Voluntary cleanup — petroleum + drycleaning from DEP Cleanup layer 0
+    vol_data  = arcgis_query(DEP_CLEANUP, lat, lon, 0.5,
+                    where="CLCC_CLEANUP_CATEGORY_KEY IN ('PETRO') OR SOURCE_DATABASE_NAME LIKE '%DRYCLEANING%'",
+                    out_fields="BUSINESS_NAME,RSC2_REMEDIATION_STATUS_KEY,CLCC_CLEANUP_CATEGORY_KEY")
+    vol_sites = parse_features(vol_data, lat, lon, "BUSINESS_NAME",
+                    status_field="RSC2_REMEDIATION_STATUS_KEY",
+                    nc_statuses=DEP_NC_STATUSES)
+    res["vol"] = {"count": len(vol_sites), "sites": vol_sites}
 
-    # FDEP Brownfields — filtered from ERIC
-    brown_data  = fdep_query(FDEP_BROWN, lat, lon, 0.5,
-                      where_clause="PROGRAM_TYPE='BROWNFIELDS' OR PROGRAM LIKE '%Brownfield%'",
-                      out_fields="SITE_NAME,PROGRAM_STATUS,PROGRAM_TYPE")
-    brown_sites = extract_fdep_sites(brown_data, lat, lon,
-                      name_field="SITE_NAME",
-                      status_field="PROGRAM_STATUS",
-                      nc_statuses=FDEP_NC_STATUSES)
-    results["brown"] = {"count": len(brown_sites), "sites": brown_sites}
+    # Brownfields — from DEP Cleanup layer 0
+    brown_data  = arcgis_query(DEP_CLEANUP, lat, lon, 0.5,
+                      where="CLCC_CLEANUP_CATEGORY_KEY='BROWN'",
+                      out_fields="BUSINESS_NAME,RSC2_REMEDIATION_STATUS_KEY,CLCC_CLEANUP_CATEGORY_KEY")
+    brown_sites = parse_features(brown_data, lat, lon, "BUSINESS_NAME",
+                      status_field="RSC2_REMEDIATION_STATUS_KEY",
+                      nc_statuses=DEP_NC_STATUSES)
+    res["brown"] = {"count": len(brown_sites), "sites": brown_sites}
 
     # ── Adjoining (~0.15 mi) ──────────────────────────────────────────────────
-    ust_data  = fdep_query(FDEP_STCM_UST, lat, lon, 0.15, out_fields="SITE_NAME,SITE_STATUS,TANK_STATUS")
-    ust_sites = extract_fdep_sites(ust_data, lat, lon,
-                    name_field="SITE_NAME",
+    ust_data  = arcgis_query(STCM_TANKS, lat, lon, 0.15,
+                    out_fields="SITE_NAME,SITE_STATUS,TANK_COUNT")
+    ust_sites = parse_features(ust_data, lat, lon, "SITE_NAME",
                     status_field="SITE_STATUS",
-                    nc_statuses={"OPEN", "ACTIVE"})
-    results["ust"] = {"count": len(ust_sites), "sites": ust_sites}
+                    nc_statuses={"OPEN", "ACTIVE", "Active", "Open"})
+    res["ust"] = {"count": len(ust_sites), "sites": ust_sites}
 
-    results["rcra_gen"] = echo_rcra_query(lat, lon, 0.15, "LQG,SQG,VSQG")
+    res["rcra_gen"] = echo_rcra(lat, lon, 0.15, "LQG,SQG,VSQG")
 
     # ── Property only (~0.05 mi) ──────────────────────────────────────────────
-    ic_data  = fdep_query(FDEP_IC, lat, lon, 0.05, out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE")
-    ic_sites = extract_fdep_sites(ic_data, lat, lon,
-                   name_field="SITE_NAME",
+    ic_data  = arcgis_query(ICR, lat, lon, 0.05,
+                   out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE")
+    ic_sites = parse_features(ic_data, lat, lon, "SITE_NAME",
                    status_field="IC_STATUS",
                    nc_statuses={"ACTIVE", "Active"})
-    results["ic"] = {"count": len(ic_sites), "sites": ic_sites}
+    res["ic"] = {"count": len(ic_sites), "sites": ic_sites}
 
-    results["erns"] = erns_query(zipcode)
+    res["erns"] = erns(zipcode)
 
-    return jsonify(results)
+    return jsonify(res)
 
 
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "3.0"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "4.0"})
 
 
 if __name__ == "__main__":
