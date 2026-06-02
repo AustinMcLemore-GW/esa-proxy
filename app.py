@@ -239,7 +239,7 @@ def query():
         attrs = feat.get("attributes", {})
         gen  = str(attrs.get("GENERATOR","") or "")
         perm = str(attrs.get("PERMITTED_CONSENTED","") or "")
-        s["nc"] = gen not in {"","None","N"} or perm == "Y"
+        s["nc"] = gen in {"LQG","SQG","VSQG"} or perm == "Y"
     res["haz"] = {"count": len(chaz_sites), "sites": chaz_sites}
 
     # Contamination = SUPER, OTHCU, PFAS
