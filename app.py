@@ -90,10 +90,10 @@ ICR = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/DWM_WASTE_ICR_BA
 # SUPER/OTHCU/PFAS → Contamination sites
 # SOURCE_DATABASE_NAME DRYCLEANING/RESPONSPARTY → Voluntary cleanup
 DEP_FIELDS  = "BUSINESS_NAME,RSC2_REMEDIATION_STATUS_KEY,CLCC_CLEANUP_CATEGORY_KEY,SOURCE_DATABASE_NAME"
-# State Superfund equivalent = SUPER + OTHCU at 1 mile (separate category)
+# State Superfund equivalent = SUPER + OTHCU queried at 1 mile (separate category)
 SUPER_WHERE = "CLCC_CLEANUP_CATEGORY_KEY IN ('SUPER','OTHCU')"
-# Contamination = PFAS only now (SUPER/OTHCU moved to state_superfund)
-CONT_WHERE  = "CLCC_CLEANUP_CATEGORY_KEY IN ('PFAS','OTHCU') AND PROGRAM_TYPE NOT IN ('CERCLA','NPL','FEDERAL','STATE')"
+# Contamination = PFAS only at 0.5 mile (SUPER/OTHCU now captured in state_superfund at 1 mile)
+CONT_WHERE  = "CLCC_CLEANUP_CATEGORY_KEY='PFAS'"
 LUST_WHERE  = "CLCC_CLEANUP_CATEGORY_KEY='PETRO'"
 BROWN_WHERE = "CLCC_CLEANUP_CATEGORY_KEY='BROWN'"
 VOL_WHERE   = "SOURCE_DATABASE_NAME IN ('DRYCLEANING','RESPONSPARTY')"
