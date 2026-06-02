@@ -322,9 +322,10 @@
 const PROXY = 'https://esa-proxy.onrender.com';
 
 const CFG = [
-  {id:'npl',      label:'NPL sites',                    group:'1mile', src:'EPA CIMC',   tmpl:'NPL sites',                        noC:false},
-  {id:'fuds',     label:'FUDS',                         group:'1mile', src:'USACE FUDS', tmpl:'FUDS',                             noC:false},
-  {id:'rcra_ca',  label:'RCRA corrective action sites', group:'1mile', src:'EPA ECHO',   tmpl:'RCRA corrective action sites',     noC:false},
+  {id:'npl',             label:'NPL sites',                    group:'1mile', src:'EPA CIMC',   tmpl:'NPL sites',                        noC:false},
+  {id:'fuds',            label:'FUDS',                         group:'1mile', src:'USACE FUDS', tmpl:'FUDS',                             noC:false},
+  {id:'rcra_ca',         label:'RCRA corrective action sites', group:'1mile', src:'EPA ECHO',   tmpl:'RCRA corrective action sites',     noC:false},
+  {id:'state_superfund', label:'State Superfund equivalent',   group:'1mile', src:'FDEP Nexus', tmpl:'state Superfund equivalent sites', noC:false},
   {id:'npl_del',  label:'Delisted NPL sites',           group:'half',  src:'EPA CIMC',   tmpl:'delisted NPL sites',               noC:true},
   {id:'cercla',   label:'CERCLA sites',                 group:'half',  src:'EPA CIMC',   tmpl:'CERCLA sites',                     noC:false},
   {id:'rcra_tsd', label:'RCRA TSD facilities',          group:'half',  src:'EPA ECHO',   tmpl:'RCRA TSD facilities',              noC:false},

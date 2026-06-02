@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v6
+Phase I ESA Database Proxy — v7
 All FDEP layer URLs and field names verified from live API inspection.
 """
 
@@ -63,7 +63,9 @@ def parse_features(data, lat, lon, name_field, status_field=None, nc_statuses=No
 # ── Verified FDEP service URLs and layer numbers ──────────────────────────────
 # DEP Cleanup Sites — layer 0
 # Fields: BUSINESS_NAME, RSC2_REMEDIATION_STATUS_KEY, CLCC_CLEANUP_CATEGORY_KEY, SOURCE_DATABASE_NAME
-DEP_CLEANUP = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CLEANUP_SP/MapServer/0/query"
+DEP_CLEANUP  = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CLEANUP_SP/MapServer/0/query"
+# Florida Superfund Waste Cleanup Sites — dedicated layer 1
+FL_SUPERFUND = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CLEANUP_SP/MapServer/1/query"
 
 # CHAZ — layer 5 (Compliance & Enforcement Tracking - all active facilities)
 # Fields: ME_NAME, HANDLER_ID, FAC_INS_TYPE, GENERATOR, PERMITTED_CONSENTED
@@ -88,7 +90,10 @@ ICR = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/DWM_WASTE_ICR_BA
 # SUPER/OTHCU/PFAS → Contamination sites
 # SOURCE_DATABASE_NAME DRYCLEANING/RESPONSPARTY → Voluntary cleanup
 DEP_FIELDS  = "BUSINESS_NAME,RSC2_REMEDIATION_STATUS_KEY,CLCC_CLEANUP_CATEGORY_KEY,SOURCE_DATABASE_NAME"
-CONT_WHERE  = "CLCC_CLEANUP_CATEGORY_KEY IN ('SUPER','OTHCU','PFAS')"
+# State Superfund equivalent = SUPER + OTHCU at 1 mile (separate category)
+SUPER_WHERE = "CLCC_CLEANUP_CATEGORY_KEY IN ('SUPER','OTHCU')"
+# Contamination = PFAS only now (SUPER/OTHCU moved to state_superfund)
+CONT_WHERE  = "CLCC_CLEANUP_CATEGORY_KEY IN ('PFAS','OTHCU') AND PROGRAM_TYPE NOT IN ('CERCLA','NPL','FEDERAL','STATE')"
 LUST_WHERE  = "CLCC_CLEANUP_CATEGORY_KEY='PETRO'"
 BROWN_WHERE = "CLCC_CLEANUP_CATEGORY_KEY='BROWN'"
 VOL_WHERE   = "SOURCE_DATABASE_NAME IN ('DRYCLEANING','RESPONSPARTY')"
@@ -222,6 +227,22 @@ def query():
     res["fuds"]    = fuds(lat, lon, 1.0)
     res["rcra_ca"] = echo_rcra(lat, lon, 1.0, "CA")
 
+    # State Superfund equivalent — 1 mile
+    # Query both: dedicated FL Superfund layer (MapServer/1) + DEP Cleanup SUPER/OTHCU (MapServer/0)
+    sup_layer1 = arcgis_query(FL_SUPERFUND, lat, lon, 1.0,
+                     out_fields="BUSINESS_NAME,RSC2_REMEDIATION_STATUS_KEY,CLCC_CLEANUP_CATEGORY_KEY")
+    sup_sites1 = parse_features(sup_layer1, lat, lon, "BUSINESS_NAME",
+                     "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)
+    sup_layer0 = arcgis_query(DEP_CLEANUP, lat, lon, 1.0, where=SUPER_WHERE, out_fields=DEP_FIELDS)
+    sup_sites0 = parse_features(sup_layer0, lat, lon, "BUSINESS_NAME",
+                     "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)
+    seen_sup = set()
+    sup_deduped = []
+    for s in sorted(sup_sites1 + sup_sites0, key=lambda x: x["distance"]):
+        if s["name"] not in seen_sup:
+            seen_sup.add(s["name"]); sup_deduped.append(s)
+    res["state_superfund"] = {"count": len(sup_deduped), "sites": sup_deduped}
+
     # 0.5-mile
     delisted = frs_npl(lat, lon, 0.5, status_filter=["Deleted from the Final NPL"])
     for s in delisted.get("sites", []): s["nc"] = False
@@ -330,6 +351,7 @@ def debug():
         "dep_lust":     lambda: arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=LUST_WHERE, out_fields=DEP_FIELDS),
         "dep_vol":      lambda: arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=VOL_WHERE, out_fields=DEP_FIELDS),
         "dep_brown":    lambda: arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=BROWN_WHERE, out_fields=DEP_FIELDS),
+        "state_superfund": lambda: arcgis_query(FL_SUPERFUND, lat, lon, 1.0, out_fields="BUSINESS_NAME,RSC2_REMEDIATION_STATUS_KEY,CLCC_CLEANUP_CATEGORY_KEY"),
         "echo_rcra_ca": lambda: echo_rcra(lat, lon, 1.0, "CA"),
         "echo_rcra_tsd":lambda: echo_rcra(lat, lon, 0.5, "TSD"),
         "echo_rcra_gen":lambda: echo_rcra(lat, lon, 0.15, "LQG,SQG,VSQG"),
