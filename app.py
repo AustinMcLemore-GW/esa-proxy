@@ -229,17 +229,26 @@ def query():
     res["cercla"]   = cercla(lat, lon, 0.5)
     res["rcra_tsd"] = echo_rcra(lat, lon, 0.5, "TSD")
 
-    # CHAZ layer 5 — all active hazardous waste facilities (ME_NAME, no status filter)
+    # CHAZ layer 5 — all hazardous waste facilities, NC only if active generator
     chaz_data  = arcgis_query(CHAZ, lat, lon, 0.5,
                      out_fields="ME_NAME,FAC_INS_TYPE,GENERATOR,PERMITTED_CONSENTED")
-    chaz_sites = parse_features(chaz_data, lat, lon, "ME_NAME",
-                     status_field="FAC_INS_TYPE")
-    # Mark NC if GENERATOR or PERMITTED_CONSENTED indicates active regulated status
-    for s, feat in zip(chaz_sites, chaz_data.get("features", [])):
+    chaz_sites = []
+    for feat in chaz_data.get("features", []):
         attrs = feat.get("attributes", {})
-        gen  = str(attrs.get("GENERATOR","") or "")
-        perm = str(attrs.get("PERMITTED_CONSENTED","") or "")
-        s["nc"] = gen in {"LQG","SQG","VSQG"} or perm == "Y"
+        geom  = feat.get("geometry", {})
+        name  = str(attrs.get("ME_NAME") or "Unknown")
+        dist  = 999.0
+        if geom and "x" in geom and "y" in geom:
+            try:
+                dist = round(haversine(lat, lon, float(geom["y"]), float(geom["x"])), 2)
+            except Exception:
+                pass
+        gen    = str(attrs.get("GENERATOR","") or "")
+        perm   = str(attrs.get("PERMITTED_CONSENTED","") or "")
+        status = str(attrs.get("FAC_INS_TYPE","") or "")
+        nc     = gen in {"LQG","SQG","VSQG"} or perm == "Y"
+        chaz_sites.append({"name": name, "distance": dist, "status": status, "nc": nc})
+    chaz_sites.sort(key=lambda s: s["distance"])
     res["haz"] = {"count": len(chaz_sites), "sites": chaz_sites}
 
     # Contamination = SUPER, OTHCU, PFAS
