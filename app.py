@@ -217,7 +217,14 @@ def query():
         lat = float(request.args.get("lat"))
         lon = float(request.args.get("lon"))
     except (TypeError, ValueError):
-        return jsonify({"error": "lat and lon are required"}), 400
+        return jsonify({"error": "lat and lon are required numeric parameters"}), 400
+
+    # Validate coordinates are within Florida bounds
+    if not (24.0 <= lat <= 31.5):
+        return jsonify({"error": f"Latitude {lat} is outside Florida bounds (24.0 to 31.5). Check your coordinates."}), 400
+    if not (-87.5 <= lon <= -79.5):
+        return jsonify({"error": f"Longitude {lon} is outside Florida bounds (-87.5 to -79.5). Make sure longitude is negative for Florida."}), 400
+
     zipcode = request.args.get("zip", "")
     res = {}
 
