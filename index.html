@@ -235,13 +235,6 @@
   <!-- ── SEARCH PANE ── -->
   <div id="pane-search">
     <div class="card">
-      <div class="row">
-        <div class="grow">
-          <label class="field-label">Street address</label>
-          <input type="text" id="addr" placeholder="123 Main St, Tampa, FL 33602" onkeydown="if(event.key==='Enter')geocode()"/>
-        </div>
-        <button class="btn" onclick="geocode()" id="geo-btn">Geocode →</button>
-      </div>
       <div class="grid3">
         <div>
           <label class="field-label">Latitude</label>
@@ -256,7 +249,6 @@
           <input type="text" id="zip" placeholder="33615" maxlength="5"/>
         </div>
       </div>
-      <div id="geo-msg" style="display:none" class="msg"></div>
     </div>
 
     <div class="info-strip">
@@ -383,31 +375,6 @@ async function checkProxy() {
   }
 }
 
-async function geocode() {
-  const addr = document.getElementById('addr').value.trim();
-  const msgEl = document.getElementById('geo-msg');
-  const btn = document.getElementById('geo-btn');
-  if (!addr) return;
-  btn.textContent = 'Looking up...'; btn.disabled = true;
-  msgEl.style.display = 'none';
-  try {
-    const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&q='+encodeURIComponent(addr)+'&limit=1', {headers:{'Accept-Language':'en'}});
-    const d = await r.json();
-    if (d && d.length) {
-      document.getElementById('lat').value = parseFloat(d[0].lat).toFixed(6);
-      document.getElementById('lng').value = parseFloat(d[0].lon).toFixed(6);
-      msgEl.textContent = '✓ ' + d[0].display_name;
-      msgEl.className = 'msg ok'; msgEl.style.display = 'block';
-    } else {
-      msgEl.textContent = 'Address not found — enter coordinates manually';
-      msgEl.className = 'msg err'; msgEl.style.display = 'block';
-    }
-  } catch {
-    msgEl.textContent = 'Geocoding failed — enter coordinates manually';
-    msgEl.className = 'msg err'; msgEl.style.display = 'block';
-  }
-  btn.textContent = 'Geocode →'; btn.disabled = false;
-}
 
 function setProg(msg, pct) {
   document.getElementById('prog-msg').textContent = msg;
