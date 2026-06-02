@@ -313,3 +313,45 @@ def query():
                 res[key] = {"count": 0, "sites": [], "error": str(e)}
 
     return jsonify(res)
+# ── Debug endpoint ────────────────────────────────────────────────────────────
+
+@app.route("/debug", methods=["GET"])
+def debug():
+    db = request.args.get("db", "dep_cont")
+    try:
+        lat = float(request.args.get("lat", 27.852924))
+        lon = float(request.args.get("lon", -82.703508))
+    except ValueError:
+        return jsonify({"error": "bad lat/lon"}), 400
+
+    routes = {
+        "chaz":          lambda: arcgis_query(CHAZ, lat, lon, 0.5, out_fields="ME_NAME,FAC_INS_TYPE,GENERATOR,PERMITTED_CONSENTED"),
+        "stcm_lust":     lambda: arcgis_query(STCM_LUST, lat, lon, 0.5, out_fields="SITE_NAME,SITE_STATUS,DISCHARGE_DATE"),
+        "stcm_tanks":    lambda: arcgis_query(STCM_TANKS, lat, lon, 0.15, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"),
+        "solid":         lambda: arcgis_query(SOLID_WASTE, lat, lon, 0.5, out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"),
+        "ic":            lambda: arcgis_query(ICR, lat, lon, 0.05, out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE"),
+        "dep_cont":      lambda: arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=CONT_WHERE, out_fields=DEP_FIELDS),
+        "dep_lust":      lambda: arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=LUST_WHERE, out_fields=DEP_FIELDS),
+        "dep_vol":       lambda: arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=VOL_WHERE, out_fields=DEP_FIELDS),
+        "dep_brown":     lambda: arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=BROWN_WHERE, out_fields=DEP_FIELDS),
+        "dep_super":     lambda: arcgis_query(DEP_CLEANUP, lat, lon, 1.0, where=SUPER_WHERE, out_fields=DEP_FIELDS),
+        "fl_superfund":  lambda: arcgis_query(FL_SUPERFUND, lat, lon, 1.0, out_fields="BUSINESS_NAME,RSC2_REMEDIATION_STATUS_KEY,CLCC_CLEANUP_CATEGORY_KEY"),
+        "echo_rcra_ca":  lambda: echo_rcra(lat, lon, 1.0, "CA"),
+        "echo_rcra_tsd": lambda: echo_rcra(lat, lon, 0.5, "TSD"),
+        "echo_rcra_gen": lambda: echo_rcra(lat, lon, 0.15, "LQG,SQG,VSQG"),
+        "frs_npl":       lambda: frs_npl(lat, lon, 1.0),
+        "fuds":          lambda: fuds(lat, lon, 1.0),
+        "cercla":        lambda: cercla(lat, lon, 0.5),
+    }
+    if db not in routes:
+        return jsonify({"error": f"unknown db '{db}'", "options": list(routes.keys())}), 400
+    return jsonify(routes[db]())
+
+
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "8b"})
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
