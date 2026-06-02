@@ -1,8 +1,6 @@
 """
-Phase I ESA Database Proxy — v5
-Fixes: correct CLCC_CLEANUP_CATEGORY_KEY mappings, adds /debug endpoint.
-PETRO → LUST, BROWN → Brownfields, SUPER/OTHCU/PFAS → Contamination,
-DRYCLEANING/RESPONSPARTY → Voluntary Cleanup
+Phase I ESA Database Proxy — v6
+All FDEP layer URLs and field names verified from live API inspection.
 """
 
 from flask import Flask, jsonify, request
@@ -16,16 +14,12 @@ CORS(app)
 def index():
     return app.send_static_file('index.html')
 
-# ── Haversine ─────────────────────────────────────────────────────────────────
-
 def haversine(lat1, lon1, lat2, lon2):
     R = 3958.8
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
     a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1))*math.cos(math.radians(lat2))*math.sin(dlon/2)**2
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-
-# ── Generic ArcGIS spatial query ──────────────────────────────────────────────
 
 def arcgis_query(url, lat, lon, radius_miles, where="1=1", out_fields="*"):
     params = {
@@ -66,33 +60,44 @@ def parse_features(data, lat, lon, name_field, status_field=None, nc_statuses=No
     sites.sort(key=lambda s: s["distance"])
     return sites
 
-# ── FDEP service URLs ─────────────────────────────────────────────────────────
+# ── Verified FDEP service URLs and layer numbers ──────────────────────────────
+# DEP Cleanup Sites — layer 0
+# Fields: BUSINESS_NAME, RSC2_REMEDIATION_STATUS_KEY, CLCC_CLEANUP_CATEGORY_KEY, SOURCE_DATABASE_NAME
+DEP_CLEANUP = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CLEANUP_SP/MapServer/0/query"
 
-DEP_CLEANUP  = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CLEANUP_SP/MapServer/0/query"
-CHAZ_ALL     = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CHAZ/MapServer/0/query"
-STCM_TANKS   = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/DWM_STCM/MapServer/1/query"
-STCM_LUST    = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/DWM_STCM/MapServer/2/query"
-SOLID_WASTE  = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/SolidWaste_SP/MapServer/0/query"
-ICR          = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/DWM_WASTE_ICR_BACKG/MapServer/12/query"
+# CHAZ — layer 5 (Compliance & Enforcement Tracking - all active facilities)
+# Fields: ME_NAME, HANDLER_ID, FAC_INS_TYPE, GENERATOR, PERMITTED_CONSENTED
+CHAZ = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CHAZ/MapServer/5/query"
 
-# DEP Cleanup RSC2 status values that mean NOT complete → NC bullet
-DEP_NC = {
-    "SRCO", "ISSA", "SSA", "PA", "SI", "RI", "FS", "RD", "RA", "OAM",
-    "OPEN", "ACTIVE", "INPROCESS", "AWAITFUND", "AWAITSITEACCESS", "ELIGREVIEW",
-}
+# STCM — layer 1 (Registered Tanks), layer 2 (PCTS Discharges / Leaking)
+# Layer 1 fields: FACILITY_NAME, FACILITY_STATUS, FACILITY_CLEANUP_STATUS
+# Layer 2 fields: SITE_NAME, SITE_STATUS
+STCM_TANKS = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/DWM_STCM/MapServer/1/query"
+STCM_LUST  = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/DWM_STCM/MapServer/2/query"
 
-# ── CLCC_CLEANUP_CATEGORY_KEY mappings ────────────────────────────────────────
-# PETRO        → LUST (leaking underground storage tanks)
-# BROWN        → Brownfields
+# Solid Waste Facilities — DWM_WASTE_ICR_BACKG layer 1
+# Fields: FACILITY_NAME, FACILITY_STATUS, CLASS, FACILITY_TYPE
+SOLID_WASTE = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/DWM_WASTE_ICR_BACKG/MapServer/1/query"
+
+# ICR — DWM_WASTE_ICR_BACKG layer 12
+ICR = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/DWM_WASTE_ICR_BACKG/MapServer/12/query"
+
+# DEP Cleanup category mappings (CLCC_CLEANUP_CATEGORY_KEY):
+# PETRO  → LUST
+# BROWN  → Brownfields
 # SUPER/OTHCU/PFAS → Contamination sites
 # SOURCE_DATABASE_NAME DRYCLEANING/RESPONSPARTY → Voluntary cleanup
-
+DEP_FIELDS  = "BUSINESS_NAME,RSC2_REMEDIATION_STATUS_KEY,CLCC_CLEANUP_CATEGORY_KEY,SOURCE_DATABASE_NAME"
 CONT_WHERE  = "CLCC_CLEANUP_CATEGORY_KEY IN ('SUPER','OTHCU','PFAS')"
 LUST_WHERE  = "CLCC_CLEANUP_CATEGORY_KEY='PETRO'"
 BROWN_WHERE = "CLCC_CLEANUP_CATEGORY_KEY='BROWN'"
 VOL_WHERE   = "SOURCE_DATABASE_NAME IN ('DRYCLEANING','RESPONSPARTY')"
 
-DEP_FIELDS  = "BUSINESS_NAME,RSC2_REMEDIATION_STATUS_KEY,CLCC_CLEANUP_CATEGORY_KEY,SOURCE_DATABASE_NAME"
+# RSC2 status values = not complete → triggers NC bullet
+DEP_NC = {
+    "SRCO","ISSA","SSA","PA","SI","RI","FS","RD","RA","OAM",
+    "OPEN","ACTIVE","INPROCESS","AWAITFUND","AWAITSITEACCESS","ELIGREVIEW",
+}
 
 # ── EPA ECHO RCRA ─────────────────────────────────────────────────────────────
 
@@ -100,11 +105,9 @@ def echo_rcra(lat, lon, radius_miles, handler_types):
     try:
         r = requests.get(
             "https://echodata.epa.gov/echo/rcra_rest_services.get_facility_info",
-            params={
-                "output": "JSON", "p_lat": lat, "p_lon": lon,
-                "p_radius_mi": radius_miles, "p_htype": handler_types,
-                "qcolumns": "1,2,3,4,5,6,38,39,40",
-            }, timeout=15)
+            params={"output":"JSON","p_lat":lat,"p_lon":lon,
+                    "p_radius_mi":radius_miles,"p_htype":handler_types,
+                    "qcolumns":"1,2,3,4,5,6,38,39,40"}, timeout=15)
         r.raise_for_status()
         facilities = r.json().get("Results", {}).get("Facilities", [])
         sites = []
@@ -113,8 +116,8 @@ def echo_rcra(lat, lon, radius_miles, handler_types):
             flon = float(f.get("FacLong", 0) or 0)
             dist = round(haversine(lat, lon, flat, flon), 2) if flat else 999.0
             status = f.get("RCRAComplianceStatus", "") or ""
-            nc = "CA" in handler_types and status not in ["No Violation Identified", ""]
-            sites.append({"name": f.get("FacName","Unknown"), "distance": dist, "status": status, "nc": nc})
+            nc = "CA" in handler_types and status not in ["No Violation Identified",""]
+            sites.append({"name":f.get("FacName","Unknown"),"distance":dist,"status":status,"nc":nc})
         sites.sort(key=lambda s: s["distance"])
         return {"count": len(sites), "sites": sites}
     except Exception as e:
@@ -137,8 +140,8 @@ def frs_npl(lat, lon, radius_miles, status_filter=None):
         flat = float(attrs.get("LATITUDE83",  0) or geom.get("y", 0))
         flon = float(attrs.get("LONGITUDE83", 0) or geom.get("x", 0))
         dist = round(haversine(lat, lon, flat, flon), 2) if flat else 999.0
-        nc   = status in ["Currently on the Final NPL", "Proposed for NPL"]
-        sites.append({"name": attrs.get("PRIMARY_NAME","Unknown"), "distance": dist, "status": status, "nc": nc})
+        nc   = status in ["Currently on the Final NPL","Proposed for NPL"]
+        sites.append({"name":attrs.get("PRIMARY_NAME","Unknown"),"distance":dist,"status":status,"nc":nc})
     sites.sort(key=lambda s: s["distance"])
     return {"count": len(sites), "sites": sites}
 
@@ -153,12 +156,12 @@ def fuds(lat, lon, radius_miles):
     for feat in data.get("features", []):
         attrs  = feat.get("attributes", {})
         geom   = feat.get("geometry", {})
-        status = attrs.get("PROJECT_STATUS", "") or ""
+        status = attrs.get("PROJECT_STATUS","") or ""
         flat   = float(attrs.get("LATITUDE",  0) or geom.get("y", 0))
         flon   = float(attrs.get("LONGITUDE", 0) or geom.get("x", 0))
         dist   = round(haversine(lat, lon, flat, flon), 2) if flat else 999.0
         nc     = status.upper() not in {"CLOSED","COMPLETE","NO FURTHER ACTION","NFA"}
-        sites.append({"name": attrs.get("PROJECT_NAME","Unknown FUDS"), "distance": dist, "status": status, "nc": nc})
+        sites.append({"name":attrs.get("PROJECT_NAME","Unknown FUDS"),"distance":dist,"status":status,"nc":nc})
     sites.sort(key=lambda s: s["distance"])
     return {"count": len(sites), "sites": sites}
 
@@ -175,12 +178,12 @@ def cercla(lat, lon, radius_miles):
     for feat in data.get("features", []):
         attrs  = feat.get("attributes", {})
         geom   = feat.get("geometry", {})
-        status = attrs.get("ACTIVE_STATUS", "") or ""
+        status = attrs.get("ACTIVE_STATUS","") or ""
         flat   = float(attrs.get("LATITUDE83",  0) or geom.get("y", 0))
         flon   = float(attrs.get("LONGITUDE83", 0) or geom.get("x", 0))
         dist   = round(haversine(lat, lon, flat, flon), 2) if flat else 999.0
         nc     = status.upper() not in {"ARCHIVED","INACTIVE","NFRAP","DELETED"}
-        sites.append({"name": attrs.get("PRIMARY_NAME","Unknown"), "distance": dist, "status": status, "nc": nc})
+        sites.append({"name":attrs.get("PRIMARY_NAME","Unknown"),"distance":dist,"status":status,"nc":nc})
     sites.sort(key=lambda s: s["distance"])
     return {"count": len(sites), "sites": sites}
 
@@ -221,72 +224,73 @@ def query():
 
     # 0.5-mile
     delisted = frs_npl(lat, lon, 0.5, status_filter=["Deleted from the Final NPL"])
-    for s in delisted.get("sites", []):
-        s["nc"] = False
+    for s in delisted.get("sites", []): s["nc"] = False
     res["npl_del"] = delisted
-
     res["cercla"]   = cercla(lat, lon, 0.5)
     res["rcra_tsd"] = echo_rcra(lat, lon, 0.5, "TSD")
 
-    chaz_data  = arcgis_query(CHAZ_ALL, lat, lon, 0.5, out_fields="FAC_NAME,FAC_STATUS,FAC_INS_TYPE")
-    res["haz"] = {"count": len(parse_features(chaz_data, lat, lon, "FAC_NAME",
-                      "FAC_STATUS", {"ACTIVE","Active"})),
-                  "sites": parse_features(chaz_data, lat, lon, "FAC_NAME",
-                      "FAC_STATUS", {"ACTIVE","Active"})}
+    # CHAZ layer 5 — all active hazardous waste facilities (ME_NAME, no status filter)
+    chaz_data  = arcgis_query(CHAZ, lat, lon, 0.5,
+                     out_fields="ME_NAME,FAC_INS_TYPE,GENERATOR,PERMITTED_CONSENTED")
+    chaz_sites = parse_features(chaz_data, lat, lon, "ME_NAME",
+                     status_field="FAC_INS_TYPE")
+    # Mark NC if GENERATOR or PERMITTED_CONSENTED indicates active regulated status
+    for s, feat in zip(chaz_sites, chaz_data.get("features", [])):
+        attrs = feat.get("attributes", {})
+        gen  = str(attrs.get("GENERATOR","") or "")
+        perm = str(attrs.get("PERMITTED_CONSENTED","") or "")
+        s["nc"] = gen not in {"","None","N"} or perm == "Y"
+    res["haz"] = {"count": len(chaz_sites), "sites": chaz_sites}
 
-    # Contamination = SUPER, OTHCU, PFAS categories
+    # Contamination = SUPER, OTHCU, PFAS
     cont_data  = arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=CONT_WHERE, out_fields=DEP_FIELDS)
     cont_sites = parse_features(cont_data, lat, lon, "BUSINESS_NAME",
                      "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)
     res["cont"] = {"count": len(cont_sites), "sites": cont_sites}
 
+    # Solid Waste — DWM_WASTE_ICR_BACKG layer 1 (FACILITY_NAME, FACILITY_STATUS)
     solid_data  = arcgis_query(SOLID_WASTE, lat, lon, 0.5,
-                      out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_TYPE")
+                      out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE")
     solid_sites = parse_features(solid_data, lat, lon, "FACILITY_NAME",
-                      "FACILITY_STATUS", {"ACTIVE","OPEN","Active","Open"})
+                      "FACILITY_STATUS", {"Active","ACTIVE"})
     res["solid"] = {"count": len(solid_sites), "sites": solid_sites}
 
-    # LUST = PETRO category from DEP Cleanup layer 0
-    lust_dep    = arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=LUST_WHERE, out_fields=DEP_FIELDS)
-    lust_sites  = parse_features(lust_dep, lat, lon, "BUSINESS_NAME",
-                      "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)
-    # Also query STCM PCTS discharges layer for leaking tanks
-    lust_stcm   = arcgis_query(STCM_LUST, lat, lon, 0.5,
-                      out_fields="SITE_NAME,SITE_STATUS,DISCHARGE_DATE")
+    # LUST = PETRO from DEP Cleanup + STCM layer 2 (PCTS discharges)
+    lust_dep   = arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=LUST_WHERE, out_fields=DEP_FIELDS)
+    lust_sites = parse_features(lust_dep, lat, lon, "BUSINESS_NAME",
+                     "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)
+    lust_stcm  = arcgis_query(STCM_LUST, lat, lon, 0.5,
+                     out_fields="SITE_NAME,SITE_STATUS,DISCHARGE_DATE")
     lust_stcm_sites = parse_features(lust_stcm, lat, lon, "SITE_NAME",
                           "SITE_STATUS", {"OPEN","ACTIVE","Active","Open"})
-    # Merge and deduplicate by name
-    all_lust = lust_sites + lust_stcm_sites
     seen = set()
-    deduped_lust = []
-    for s in sorted(all_lust, key=lambda x: x["distance"]):
+    deduped = []
+    for s in sorted(lust_sites + lust_stcm_sites, key=lambda x: x["distance"]):
         if s["name"] not in seen:
-            seen.add(s["name"])
-            deduped_lust.append(s)
-    res["lust"] = {"count": len(deduped_lust), "sites": deduped_lust}
+            seen.add(s["name"]); deduped.append(s)
+    res["lust"] = {"count": len(deduped), "sites": deduped}
 
-    # Voluntary cleanup = DRYCLEANING + RESPONSPARTY source databases
+    # Voluntary cleanup = DRYCLEANING + RESPONSPARTY
     vol_data  = arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=VOL_WHERE, out_fields=DEP_FIELDS)
     vol_sites = parse_features(vol_data, lat, lon, "BUSINESS_NAME",
                     "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)
     res["vol"] = {"count": len(vol_sites), "sites": vol_sites}
 
-    # Brownfields = BROWN category
+    # Brownfields = BROWN
     brown_data  = arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=BROWN_WHERE, out_fields=DEP_FIELDS)
     brown_sites = parse_features(brown_data, lat, lon, "BUSINESS_NAME",
                       "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)
     res["brown"] = {"count": len(brown_sites), "sites": brown_sites}
 
-    # Adjoining
+    # Adjoining — STCM layer 1 (registered tanks): FACILITY_NAME, FACILITY_STATUS
     ust_data  = arcgis_query(STCM_TANKS, lat, lon, 0.15,
-                    out_fields="SITE_NAME,SITE_STATUS,TANK_COUNT")
-    ust_sites = parse_features(ust_data, lat, lon, "SITE_NAME",
-                    "SITE_STATUS", {"OPEN","ACTIVE","Active","Open"})
+                    out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS")
+    ust_sites = parse_features(ust_data, lat, lon, "FACILITY_NAME",
+                    "FACILITY_STATUS", {"Active","ACTIVE","Open","OPEN"})
     res["ust"] = {"count": len(ust_sites), "sites": ust_sites}
-
     res["rcra_gen"] = echo_rcra(lat, lon, 0.15, "LQG,SQG,VSQG")
 
-    # Property only
+    # Property only — ICR layer 12
     ic_data  = arcgis_query(ICR, lat, lon, 0.05,
                    out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE")
     ic_sites = parse_features(ic_data, lat, lon, "SITE_NAME",
@@ -294,78 +298,43 @@ def query():
     res["ic"] = {"count": len(ic_sites), "sites": ic_sites}
 
     res["erns"] = erns(zipcode)
-
     return jsonify(res)
 
-# ── Debug endpoint — returns raw API response for a single database ───────────
+# ── Debug endpoint ────────────────────────────────────────────────────────────
 
 @app.route("/debug", methods=["GET"])
 def debug():
-    """
-    Usage: /debug?db=chaz&lat=27.852924&lon=-82.703508
-    db options: chaz, stcm_lust, stcm_tanks, solid, ic, dep_cont, dep_lust,
-                dep_vol, dep_brown, echo_rcra_ca, echo_rcra_gen, echo_rcra_tsd,
-                frs_npl, fuds, cercla
-    """
-    db  = request.args.get("db", "dep_cont")
+    db = request.args.get("db","dep_cont")
     try:
         lat = float(request.args.get("lat", 27.852924))
         lon = float(request.args.get("lon", -82.703508))
     except ValueError:
         return jsonify({"error": "bad lat/lon"}), 400
 
-    if db == "chaz":
-        return jsonify(arcgis_query(CHAZ_ALL, lat, lon, 0.5,
-                           out_fields="FAC_NAME,FAC_STATUS,FAC_INS_TYPE"))
-    elif db == "stcm_lust":
-        return jsonify(arcgis_query(STCM_LUST, lat, lon, 0.5,
-                           out_fields="SITE_NAME,SITE_STATUS,DISCHARGE_DATE"))
-    elif db == "stcm_tanks":
-        return jsonify(arcgis_query(STCM_TANKS, lat, lon, 0.15,
-                           out_fields="SITE_NAME,SITE_STATUS,TANK_COUNT"))
-    elif db == "solid":
-        return jsonify(arcgis_query(SOLID_WASTE, lat, lon, 0.5,
-                           out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_TYPE"))
-    elif db == "ic":
-        return jsonify(arcgis_query(ICR, lat, lon, 0.05,
-                           out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE"))
-    elif db == "dep_cont":
-        return jsonify(arcgis_query(DEP_CLEANUP, lat, lon, 0.5,
-                           where=CONT_WHERE, out_fields=DEP_FIELDS))
-    elif db == "dep_lust":
-        return jsonify(arcgis_query(DEP_CLEANUP, lat, lon, 0.5,
-                           where=LUST_WHERE, out_fields=DEP_FIELDS))
-    elif db == "dep_vol":
-        return jsonify(arcgis_query(DEP_CLEANUP, lat, lon, 0.5,
-                           where=VOL_WHERE, out_fields=DEP_FIELDS))
-    elif db == "dep_brown":
-        return jsonify(arcgis_query(DEP_CLEANUP, lat, lon, 0.5,
-                           where=BROWN_WHERE, out_fields=DEP_FIELDS))
-    elif db == "echo_rcra_ca":
-        return jsonify(echo_rcra(lat, lon, 1.0, "CA"))
-    elif db == "echo_rcra_tsd":
-        return jsonify(echo_rcra(lat, lon, 0.5, "TSD"))
-    elif db == "echo_rcra_gen":
-        return jsonify(echo_rcra(lat, lon, 0.15, "LQG,SQG,VSQG"))
-    elif db == "frs_npl":
-        return jsonify(frs_npl(lat, lon, 1.0))
-    elif db == "fuds":
-        return jsonify(fuds(lat, lon, 1.0))
-    elif db == "cercla":
-        return jsonify(cercla(lat, lon, 0.5))
-    else:
-        return jsonify({"error": f"unknown db '{db}'", "options": [
-            "chaz","stcm_lust","stcm_tanks","solid","ic",
-            "dep_cont","dep_lust","dep_vol","dep_brown",
-            "echo_rcra_ca","echo_rcra_tsd","echo_rcra_gen",
-            "frs_npl","fuds","cercla"
-        ]}), 400
-
+    routes = {
+        "chaz":         lambda: arcgis_query(CHAZ, lat, lon, 0.5, out_fields="ME_NAME,FAC_INS_TYPE,GENERATOR,PERMITTED_CONSENTED"),
+        "stcm_lust":    lambda: arcgis_query(STCM_LUST, lat, lon, 0.5, out_fields="SITE_NAME,SITE_STATUS,DISCHARGE_DATE"),
+        "stcm_tanks":   lambda: arcgis_query(STCM_TANKS, lat, lon, 0.15, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"),
+        "solid":        lambda: arcgis_query(SOLID_WASTE, lat, lon, 0.5, out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"),
+        "ic":           lambda: arcgis_query(ICR, lat, lon, 0.05, out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE"),
+        "dep_cont":     lambda: arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=CONT_WHERE, out_fields=DEP_FIELDS),
+        "dep_lust":     lambda: arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=LUST_WHERE, out_fields=DEP_FIELDS),
+        "dep_vol":      lambda: arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=VOL_WHERE, out_fields=DEP_FIELDS),
+        "dep_brown":    lambda: arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=BROWN_WHERE, out_fields=DEP_FIELDS),
+        "echo_rcra_ca": lambda: echo_rcra(lat, lon, 1.0, "CA"),
+        "echo_rcra_tsd":lambda: echo_rcra(lat, lon, 0.5, "TSD"),
+        "echo_rcra_gen":lambda: echo_rcra(lat, lon, 0.15, "LQG,SQG,VSQG"),
+        "frs_npl":      lambda: frs_npl(lat, lon, 1.0),
+        "fuds":         lambda: fuds(lat, lon, 1.0),
+        "cercla":       lambda: cercla(lat, lon, 0.5),
+    }
+    if db not in routes:
+        return jsonify({"error": f"unknown db '{db}'", "options": list(routes.keys())}), 400
+    return jsonify(routes[db]())
 
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "5.0"})
-
+    return jsonify({"status":"ok","service":"Phase I ESA Proxy","version":"6.0"})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
