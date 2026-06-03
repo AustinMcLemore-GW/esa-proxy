@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.11
+Phase I ESA Database Proxy — v9.12
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -216,13 +216,13 @@ def echo_rcra(lat, lon, radius_miles, handler_types):
 def fuds(lat, lon, radius_miles):
     """Query USACE FUDS using envelope spatial query — deduplicate by site name."""
     url = "https://services7.arcgis.com/n1YM8pTrFmm7L4hs/arcgis/rest/services/FUDS_Projects/FeatureServer/0/query"
-    mn_lat, mx_lat, mn_lon, mx_lon = bbox(lat, lon, radius_miles)
-    envelope = f"{mn_lon},{mn_lat},{mx_lon},{mx_lat}"
     try:
         r = requests.get(url, params={
-            "geometry":       envelope,
-            "geometryType":   "esriGeometryEnvelope",
+            "geometry":       f"{lon},{lat}",
+            "geometryType":   "esriGeometryPoint",
             "spatialRel":     "esriSpatialRelIntersects",
+            "distance":       radius_miles * 1609.34,
+            "units":          "esriSRUnit_Meter",
             "inSR":           "4326",
             "outSR":          "4326",
             "outFields":      "PROJECT_NAME,PROJECT_STATUS,SITE_NAME,LATITUDE,LONGITUDE",
@@ -445,7 +445,7 @@ def query():
         "state_superfund":get_state_superfund,
         "npl_del":        get_delisted,
         "cercla":         lambda: cercla(lat, lon, 0.5),
-        "rcra_tsd":       lambda: echo_rcra(lat, lon, 0.5, "TSD"),
+        "rcra_tsd":       lambda: (__import__('time').sleep(2), echo_rcra(lat, lon, 0.5, "TSD"))[1],
         "haz":            get_haz,
         "cont":           lambda: (lambda s: {"count": len(s), "sites": s})(merge_dedup(
                               parse_fdep(fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=CONT_WHERE, out_fields=DEP_FIELDS), lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC),
@@ -457,7 +457,7 @@ def query():
                               eric_query(lat, lon, 0.5, program_filter=["Drycleaning Solvent Cleanup Program","Responsible Party Cleanup"]))),
         "brown":          get_brownfields,
         "ust":            lambda: mk(None)(parse_fdep(fdep_query(STCM_TANKS, lat, lon, 0.05, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"), lat, lon, "FACILITY_NAME", "FACILITY_STATUS", {"Active","ACTIVE","Open","OPEN"})),
-        "rcra_gen":       lambda: echo_rcra(lat, lon, 0.05, "LQG,SQG,VSQG"),
+        "rcra_gen":       lambda: (__import__('time').sleep(4), echo_rcra(lat, lon, 0.05, "LQG,SQG,VSQG"))[1],
         "ic":             lambda: mk(None)(parse_fdep(fdep_query(ICR, lat, lon, 0.05, out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE"), lat, lon, "SITE_NAME", "IC_STATUS", {"ACTIVE","Active"})),
         "erns":           lambda: erns(zipcode),
     }
@@ -557,7 +557,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.11", "name": "Phase I ESA Proxy v9.11"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.12", "name": "Phase I ESA Proxy v9.12"})
 
 @app.route("/browndebug", methods=["GET"])
 def browndebug():
