@@ -324,7 +324,8 @@ def query():
             status_field="ACTIVE_STATUS",
             nc_statuses=None)
         for s in epa_sites:
-            s["nc"] = s["status"].upper() not in {"COMPLETE","COMPLETED","DELETED","ARCHIVED","READY FOR ANTICIPATED USE"}
+            st = (s.get("status") or "").upper()
+            s["nc"] = st not in {"COMPLETE","COMPLETED","DELETED","ARCHIVED","READY FOR ANTICIPATED USE"}
         seen = set(); out = []
         for s in sorted(fdep_sites+epa_sites, key=lambda x: x["distance"]):
             if s["name"] not in seen: seen.add(s["name"]); out.append(s)
