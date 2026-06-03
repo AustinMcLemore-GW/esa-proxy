@@ -363,16 +363,31 @@ def rawdebug():
         results["test2_count"] = {"status": r.status_code, "body": r.json()}
     except Exception as e:
         results["test2_count"] = {"error": str(e)}
-    # Test 3: bbox where
+    # Test 3: get all field names from layer
+    try:
+        r = requests.get("https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/21",
+            params={"f":"json"}, timeout=30)
+        data = r.json()
+        fields = [f["name"] for f in data.get("fields", [])]
+        results["test3_fields"] = {"status": r.status_code, "fields": fields}
+    except Exception as e:
+        results["test3_fields"] = {"error": str(e)}
+    # Test 4: spatial query using geometry (the correct approach for this layer)
     try:
         r = requests.get(url, params={
-            "where": "LATITUDE83>=27.7 AND LATITUDE83<=27.8 AND LONGITUDE83>=-82.7 AND LONGITUDE83<=-82.6",
-            "outFields": "PRIMARY_NAME,NPL_STATUS_NAME",
-            "returnGeometry": "false", "f": "json"
+            "geometry": "-82.7,-82.6,27.7,27.8",
+            "geometryType": "esriGeometryEnvelope",
+            "spatialRel": "esriSpatialRelIntersects",
+            "inSR": "4269",
+            "outSR": "4269",
+            "outFields": "*",
+            "resultRecordCount": "3",
+            "returnGeometry": "false",
+            "f": "json"
         }, timeout=30)
-        results["test3_bbox"] = {"status": r.status_code, "body": r.json()}
+        results["test4_envelope"] = {"status": r.status_code, "body": r.json()}
     except Exception as e:
-        results["test3_bbox"] = {"error": str(e)}
+        results["test4_envelope"] = {"error": str(e)}
     return jsonify(results)
 
 # ── Health ────────────────────────────────────────────────────────────────────
