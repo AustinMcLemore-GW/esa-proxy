@@ -443,5 +443,38 @@ def rawdebug():
 def health():
     return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.0"})
 
+@app.route("/browndebug", methods=["GET"])
+def browndebug():
+    try:
+        lat = float(request.args.get("lat", 27.745717))
+        lon = float(request.args.get("lon", -82.68471))
+    except ValueError:
+        return jsonify({"error": "bad lat/lon"}), 400
+    # FDEP brownfields
+    fdep_raw = fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=BROWN_WHERE, out_fields=DEP_FIELDS)
+    fdep_sites = parse_fdep(fdep_raw, lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)
+    # EPA ACRES
+    epa_raw = frs_spatial(FRS_ACRES, lat, lon, 0.5,
+        out_fields="PRIMARY_NAME,LATITUDE83,LONGITUDE83,ACTIVE_STATUS,LOCATION_ADDRESS,REGISTRY_ID")
+    epa_sites = []
+    for feat in epa_raw.get("features", []):
+        attrs = feat.get("attributes", {})
+        epa_sites.append({
+            "name":    attrs.get("PRIMARY_NAME"),
+            "address": attrs.get("LOCATION_ADDRESS"),
+            "status":  attrs.get("ACTIVE_STATUS"),
+            "registry_id": attrs.get("REGISTRY_ID"),
+            "lat":     attrs.get("LATITUDE83"),
+            "lon":     attrs.get("LONGITUDE83"),
+        })
+    return jsonify({
+        "fdep_raw_count": len(fdep_raw.get("features", [])),
+        "fdep_sites": fdep_sites,
+        "epa_raw_count": len(epa_raw.get("features", [])),
+        "epa_sites": epa_sites,
+        "epa_error": epa_raw.get("error")
+    })
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
