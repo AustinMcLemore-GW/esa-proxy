@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.20
+Phase I ESA Database Proxy — v9.21
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -233,12 +233,16 @@ def echo_rcra_all(lat, lon):
         "p_radius_mi": 1.0,  # widest radius — we filter per category below
         "qcolumns":    "1,2,3,4,5,6,38,39,40,41",
     }
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Phase I ESA Research Tool)",
+        "Accept": "application/json",
+    }
     last_error = "Unknown error"
-    for attempt in range(2):
+    for attempt in range(3):
         try:
             if attempt > 0:
-                time.sleep(2)
-            r = requests.get(url, params=params, timeout=15)
+                time.sleep(5 * attempt)  # 5s, 10s backoff
+            r = requests.get(url, params=params, headers=headers, timeout=15)
             if r.status_code == 429:
                 last_error = "Rate limited (429)"
                 time.sleep(3)
@@ -613,7 +617,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.20", "name": "Phase I ESA Proxy v9.20"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.21", "name": "Phase I ESA Proxy v9.21"})
 
 @app.route("/browndebug", methods=["GET"])
 def browndebug():
