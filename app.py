@@ -1,6 +1,6 @@
 """
-Phase I ESA Database Proxy — v9
-Clean rewrite. FRS/NPL/CERCLA use WHERE bbox. All other EPA use ECHO REST API.
+Phase I ESA Database Proxy — v9.11
+FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
 from flask import Flask, jsonify, request
@@ -214,20 +214,61 @@ def echo_rcra(lat, lon, radius_miles, handler_types):
 
 # ── USACE FUDS ────────────────────────────────────────────────────────────────
 def fuds(lat, lon, radius_miles):
-    data = fdep_query(
-        "https://services7.arcgis.com/n1YM8pTrFmm7L4hs/arcgis/rest/services/FUDS_Projects/FeatureServer/0/query",
-        lat, lon, radius_miles, out_fields="PROJECT_NAME,PROJECT_STATUS,LATITUDE,LONGITUDE")
+    """Query USACE FUDS using envelope spatial query — deduplicate by site name."""
+    url = "https://services7.arcgis.com/n1YM8pTrFmm7L4hs/arcgis/rest/services/FUDS_Projects/FeatureServer/0/query"
+    mn_lat, mx_lat, mn_lon, mx_lon = bbox(lat, lon, radius_miles)
+    envelope = f"{mn_lon},{mn_lat},{mx_lon},{mx_lat}"
+    try:
+        r = requests.get(url, params={
+            "geometry":       envelope,
+            "geometryType":   "esriGeometryEnvelope",
+            "spatialRel":     "esriSpatialRelIntersects",
+            "inSR":           "4326",
+            "outSR":          "4326",
+            "outFields":      "PROJECT_NAME,PROJECT_STATUS,SITE_NAME,LATITUDE,LONGITUDE",
+            "returnGeometry": "true",
+            "f":              "json",
+        }, timeout=20)
+        r.raise_for_status()
+        data = r.json()
+    except Exception as e:
+        return {"count": 0, "sites": [], "error": str(e)}
+    if "error" in data:
+        return {"count": 0, "sites": [], "error": data["error"]}
     sites = []
+    seen_names = set()
+    raw_sites = []
     for feat in data.get("features", []):
         attrs  = feat.get("attributes", {})
         geom   = feat.get("geometry", {})
-        status = attrs.get("PROJECT_STATUS", "") or ""
+        status = str(attrs.get("PROJECT_STATUS","") or "")
         flat   = float(attrs.get("LATITUDE", 0) or geom.get("y", 0))
         flon   = float(attrs.get("LONGITUDE", 0) or geom.get("x", 0))
         dist   = round(haversine(lat, lon, flat, flon), 2) if flat else 999.0
-        nc     = status.upper() not in {"CLOSED","COMPLETE","NO FURTHER ACTION","NFA"}
-        sites.append({"name": attrs.get("PROJECT_NAME","Unknown FUDS"), "distance": dist, "status": status, "nc": nc})
-    sites.sort(key=lambda s: s["distance"])
+        if dist > radius_miles:
+            continue
+        # Use SITE_NAME for deduplication if available, else PROJECT_NAME
+        site_name = str(attrs.get("SITE_NAME") or attrs.get("PROJECT_NAME") or "Unknown FUDS")
+        proj_name = str(attrs.get("PROJECT_NAME") or site_name)
+        nc = status.upper() not in {"CLOSED","COMPLETE","NO FURTHER ACTION","NFA","INELIGIBLE"}
+        raw_sites.append({"site_name": site_name, "name": proj_name,
+                          "distance": dist, "status": status, "nc": nc})
+    # Deduplicate by site name — keep closest, flag NC if any record is NC
+    site_groups = {}
+    for s in raw_sites:
+        key = s["site_name"]
+        if key not in site_groups:
+            site_groups[key] = s
+        else:
+            # Keep closest, OR if this one is NC upgrade the existing
+            if s["distance"] < site_groups[key]["distance"]:
+                site_groups[key]["distance"] = s["distance"]
+            if s["nc"]:
+                site_groups[key]["nc"] = True
+    sites = sorted(site_groups.values(), key=lambda s: s["distance"])
+    # Clean up internal field
+    for s in sites:
+        s.pop("site_name", None)
     return {"count": len(sites), "sites": sites}
 
 # ── FRS NPL ───────────────────────────────────────────────────────────────────
@@ -516,7 +557,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.10"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.11", "name": "Phase I ESA Proxy v9.11"})
 
 @app.route("/browndebug", methods=["GET"])
 def browndebug():
