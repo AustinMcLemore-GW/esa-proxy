@@ -64,6 +64,39 @@ def frs_query(url, where, out_fields):
     except Exception as e:
         return {"error": str(e), "features": []}
 
+def eric_query(lat, lon, radius_miles, program_filter=None):
+    """Query ERIC layer 8 — the unified FDEP cleanup database with all 11 programs."""
+    where = "1=1"
+    if program_filter:
+        progs = "','".join(program_filter)
+        where = f"PROGRAM IN ('{progs}')"
+    data = fdep_query(ERIC_LAYER, lat, lon, radius_miles,
+        where=where,
+        out_fields="SITE_NAME,PROGRAM,PROGRAM_TYPE,SITE_STATUS,ERIC_SITE_ID")
+    sites = []
+    for feat in data.get("features", []):
+        attrs = feat.get("attributes", {})
+        geom  = feat.get("geometry", {})
+        name  = str(attrs.get("SITE_NAME") or "Unknown")
+        dist  = 999.0
+        if geom and "x" in geom and "y" in geom:
+            try: dist = round(haversine(lat, lon, float(geom["y"]), float(geom["x"])), 2)
+            except: pass
+        status = str(attrs.get("SITE_STATUS","") or "")
+        nc = status.upper() in ERIC_NC
+        sites.append({"name": name, "distance": dist, "status": status, "nc": nc,
+                      "program": str(attrs.get("PROGRAM","") or "")})
+    sites.sort(key=lambda s: s["distance"])
+    return sites
+
+def merge_dedup(list1, list2):
+    """Merge two site lists, deduplicate by name, keep closest distance."""
+    seen = set(); out = []
+    for s in sorted(list1 + list2, key=lambda x: x["distance"]):
+        if s["name"] not in seen:
+            seen.add(s["name"]); out.append(s)
+    return out
+
 def frs_spatial(url, lat, lon, radius_miles, out_fields="*"):
     """EPA FRS ArcGIS layers — envelope spatial query with correct xmin,ymin,xmax,ymax order."""
     mn_lat, mx_lat, mn_lon, mx_lon = bbox(lat, lon, radius_miles)
@@ -145,6 +178,8 @@ BROWN_WHERE = "CLCC_CLEANUP_CATEGORY_KEY='BROWN'"
 VOL_WHERE   = "SOURCE_DATABASE_NAME IN ('DRYCLEANING','RESPONSPARTY')"
 DEP_NC = {"SRCO","ISSA","SSA","PA","SI","RI","FS","RD","RA","OAM",
            "OPEN","ACTIVE","INPROCESS","AWAITFUND","AWAITSITEACCESS","ELIGREVIEW"}
+# ERIC layer 8 SITE_STATUS values that are non-compliant (active cleanup)
+ERIC_NC = {"OPEN","ONHOLD"}  # CLOSED and CLOSEDWCOND = complete
 
 # ── EPA ECHO RCRA ─────────────────────────────────────────────────────────────
 def echo_rcra(lat, lon, radius_miles, handler_types):
@@ -318,14 +353,16 @@ def query():
         return {"count": len(sites), "sites": sites}
 
     def get_lust():
+        # DEP Cleanup layer 0 — PETRO category
         s1 = parse_fdep(fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=LUST_WHERE, out_fields=DEP_FIELDS),
             lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)
+        # STCM PCTS discharge layer
         s2 = parse_fdep(fdep_query(STCM_LUST, lat, lon, 0.5, out_fields="SITE_NAME,SITE_STATUS,DISCHARGE_DATE"),
             lat, lon, "SITE_NAME", "SITE_STATUS", {"OPEN","ACTIVE","Active","Open"})
-        seen = set(); out = []
-        for s in sorted(s1+s2, key=lambda x: x["distance"]):
-            if s["name"] not in seen: seen.add(s["name"]); out.append(s)
-        return {"count": len(out), "sites": out}
+        # ERIC layer 8 — Petroleum Restoration Program and Responsible Party petroleum sites
+        s3 = eric_query(lat, lon, 0.5, program_filter=["Petroleum Restoration Program","Responsible Party Cleanup"])
+        all_sites = merge_dedup(s1 + s2, s3)
+        return {"count": len(all_sites), "sites": all_sites}
 
     def get_brownfields():
         fdep_sites = parse_fdep(fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=BROWN_WHERE, out_fields=DEP_FIELDS),
@@ -367,10 +404,14 @@ def query():
         "cercla":         lambda: cercla(lat, lon, 0.5),
         "rcra_tsd":       lambda: echo_rcra(lat, lon, 0.5, "TSD"),
         "haz":            get_haz,
-        "cont":           lambda: mk(None)(parse_fdep(fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=CONT_WHERE, out_fields=DEP_FIELDS), lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)),
+        "cont":           lambda: (lambda s: {"count": len(s), "sites": s})(merge_dedup(
+                              parse_fdep(fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=CONT_WHERE, out_fields=DEP_FIELDS), lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC),
+                              eric_query(lat, lon, 0.5, program_filter=["State Funded Cleanup Program","Site Investigation Section","Hazardous Waste Cleanup Program","CERCLA Site Screening Program","State and Tribal Response Program","State-owned Lands Cleanup Program"]))),
         "solid":          lambda: mk(None)(parse_fdep(fdep_query(SOLID_WASTE, lat, lon, 0.5, where="FACILITY_STATUS NOT IN ('Closed','Inactive','CLOSED','INACTIVE','Closed, No Gw Monitoring','Closed, Gw Monitoring')", out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"), lat, lon, "FACILITY_NAME", "FACILITY_STATUS", set())),  # Solid waste: never NC — permitted facilities are compliant
         "lust":           get_lust,
-        "vol":            lambda: mk(None)(parse_fdep(fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=VOL_WHERE, out_fields=DEP_FIELDS), lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)),
+        "vol":            lambda: (lambda s: {"count": len(s), "sites": s})(merge_dedup(
+                              parse_fdep(fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=VOL_WHERE, out_fields=DEP_FIELDS), lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC),
+                              eric_query(lat, lon, 0.5, program_filter=["Drycleaning Solvent Cleanup Program","Responsible Party Cleanup"]))),
         "brown":          get_brownfields,
         "ust":            lambda: mk(None)(parse_fdep(fdep_query(STCM_TANKS, lat, lon, 0.05, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"), lat, lon, "FACILITY_NAME", "FACILITY_STATUS", {"Active","ACTIVE","Open","OPEN"})),
         "rcra_gen":       lambda: echo_rcra(lat, lon, 0.05, "LQG,SQG,VSQG"),
@@ -413,7 +454,7 @@ def debug():
         "stcm_tanks":     lambda: fdep_query(STCM_TANKS, lat, lon, 0.05, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"),
         "solid":          lambda: fdep_query(SOLID_WASTE, lat, lon, 0.5, out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"),
         "ic":             lambda: fdep_query(ICR, lat, lon, 0.05, out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE"),
-        "eric":           lambda: fdep_query(ERIC_LAYER, lat, lon, 0.5, out_fields="SITE_NAME,PROGRAM,PROGRAM_TYPE,SITE_STATUS,CLEANUP_STATUS_TYPE_KEY"),
+        "eric":           lambda: fdep_query(ERIC_LAYER, lat, lon, 0.5, out_fields="SITE_NAME,PROGRAM,PROGRAM_TYPE,SITE_STATUS,ERIC_SITE_ID"),
         "dep_cont":       lambda: fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=CONT_WHERE, out_fields=DEP_FIELDS),
         "dep_lust":       lambda: fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=LUST_WHERE, out_fields=DEP_FIELDS),
         "dep_vol":        lambda: fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=VOL_WHERE, out_fields=DEP_FIELDS),
