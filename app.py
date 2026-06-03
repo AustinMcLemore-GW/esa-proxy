@@ -248,7 +248,9 @@ def cercla(lat, lon, radius_miles):
         dist = haversine(lat, lon, flat, flon)
         if dist > radius_miles:
             continue
-        nc = active.upper() not in {"ARCHIVED","INACTIVE","DELETED FROM THE FINAL NPL"}
+        # CERCLA non-NPL: "NOT ON THE NPL" means assessed, no further action
+        # Only flag NC if there is an active removal action underway
+        nc = active.upper() in {"REMOVAL ACTION UNDERWAY", "REMOVAL ACTION COMPLETE - REMEDIAL ACTION UNDERWAY"}
         sites.append({"name": str(attrs.get("PRIMARY_NAME","Unknown")),
                       "distance": round(dist,2), "status": active, "nc": nc})
     sites.sort(key=lambda s: s["distance"])
@@ -344,7 +346,8 @@ def query():
             if dist > 0.5:
                 continue
             st = str(attrs.get("ACTIVE_STATUS","") or "").upper()
-            nc = st not in {"COMPLETE","COMPLETED","DELETED","ARCHIVED","READY FOR ANTICIPATED USE"}
+            # Null/empty = assessed only, not active compliance issue
+            nc = st in {"CLEANUP UNDERWAY","CLEANUP ONGOING","ACTIVE","OPEN"}
             epa_sites.append({"name": str(attrs.get("PRIMARY_NAME","Unknown")),
                               "distance": round(dist,2), "status": str(attrs.get("ACTIVE_STATUS","") or ""), "nc": nc})
         seen = set(); out = []
@@ -364,7 +367,7 @@ def query():
         "rcra_tsd":       lambda: echo_rcra(lat, lon, 0.5, "TSD"),
         "haz":            get_haz,
         "cont":           lambda: mk(None)(parse_fdep(fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=CONT_WHERE, out_fields=DEP_FIELDS), lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)),
-        "solid":          lambda: mk(None)(parse_fdep(fdep_query(SOLID_WASTE, lat, lon, 0.5, where="FACILITY_STATUS NOT IN ('Closed','Inactive','CLOSED','INACTIVE','Closed, No Gw Monitoring','Closed, Gw Monitoring')", out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"), lat, lon, "FACILITY_NAME", "FACILITY_STATUS", {"Active","ACTIVE","Open","OPEN","Authorized To Operate","Authorized to Operate","Partially Closed","Active, No Gw Monitoring"})),
+        "solid":          lambda: mk(None)(parse_fdep(fdep_query(SOLID_WASTE, lat, lon, 0.5, where="FACILITY_STATUS NOT IN ('Closed','Inactive','CLOSED','INACTIVE','Closed, No Gw Monitoring','Closed, Gw Monitoring')", out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"), lat, lon, "FACILITY_NAME", "FACILITY_STATUS", set())),  # Solid waste: never NC — permitted facilities are compliant
         "lust":           get_lust,
         "vol":            lambda: mk(None)(parse_fdep(fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=VOL_WHERE, out_fields=DEP_FIELDS), lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)),
         "brown":          get_brownfields,
