@@ -174,7 +174,7 @@ SUPER_WHERE = "CLCC_CLEANUP_CATEGORY_KEY='SUPER'"
 CONT_WHERE  = "CLCC_CLEANUP_CATEGORY_KEY IN ('OTHCU','PFAS')"
 LUST_WHERE  = "CLCC_CLEANUP_CATEGORY_KEY='PETRO'"
 BROWN_WHERE = "CLCC_CLEANUP_CATEGORY_KEY='BROWN'"
-VOL_WHERE   = "SOURCE_DATABASE_NAME='DRYCLEANING'"
+VOL_WHERE   = "SOURCE_DATABASE_NAME IN ('DRYCLEANING','RESPONSPARTY')"
 DEP_NC = {"SRCO","ISSA","SSA","PA","SI","RI","FS","RD","RA","OAM",
            "OPEN","ACTIVE","INPROCESS","AWAITFUND","AWAITSITEACCESS","ELIGREVIEW"}
 # ERIC layer 8 SITE_STATUS values that are non-compliant (active cleanup)
@@ -361,8 +361,8 @@ def query():
         s2 = parse_fdep(fdep_query(STCM_LUST, lat, lon, 0.5, out_fields="SITE_NAME,SITE_STATUS,DISCHARGE_DATE"),
             lat, lon, "SITE_NAME", "SITE_STATUS", {"OPEN","ACTIVE","Active","Open"})
         # ERIC layer 8 — Petroleum Restoration Program and Responsible Party petroleum sites
-        # ERIC layer 8 — petroleum programs only for LUST
-        s3 = eric_query(lat, lon, 0.5, program_filter=["Petroleum Restoration Program","Responsible Party Cleanup","Department of Defense"])
+        # ERIC layer 8 — petroleum restoration program only (Responsible Party goes to voluntary)
+        s3 = eric_query(lat, lon, 0.5, program_filter=["Petroleum Restoration Program"])
         all_sites = merge_dedup(s1 + s2, s3)
         return {"count": len(all_sites), "sites": all_sites}
 
@@ -413,7 +413,7 @@ def query():
         "lust":           get_lust,
         "vol":            lambda: (lambda s: {"count": len(s), "sites": s})(merge_dedup(
                               parse_fdep(fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=VOL_WHERE, out_fields=DEP_FIELDS), lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC),
-                              eric_query(lat, lon, 0.5, program_filter=["Drycleaning Solvent Cleanup Program"]))),
+                              eric_query(lat, lon, 0.5, program_filter=["Drycleaning Solvent Cleanup Program","Responsible Party Cleanup"]))),
         "brown":          get_brownfields,
         "ust":            lambda: mk(None)(parse_fdep(fdep_query(STCM_TANKS, lat, lon, 0.05, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"), lat, lon, "FACILITY_NAME", "FACILITY_STATUS", {"Active","ACTIVE","Open","OPEN"})),
         "rcra_gen":       lambda: echo_rcra(lat, lon, 0.05, "LQG,SQG,VSQG"),
