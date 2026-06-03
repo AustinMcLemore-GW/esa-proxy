@@ -66,7 +66,9 @@ def parse_features(data, lat, lon, name_field, status_field=None, nc_statuses=No
 # Fields: BUSINESS_NAME, RSC2_REMEDIATION_STATUS_KEY, CLCC_CLEANUP_CATEGORY_KEY, SOURCE_DATABASE_NAME
 DEP_CLEANUP  = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CLEANUP_SP/MapServer/0/query"
 # Florida Superfund Waste Cleanup Sites — dedicated layer 1
-FL_SUPERFUND = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CLEANUP_SP/MapServer/1/query"
+FL_SUPERFUND  = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CLEANUP_SP/MapServer/1/query"
+# EPA CIMC Brownfields (ACRES) — FRS_INTERESTS MapServer layer 0
+EPA_BROWNFIELDS = "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/0/query"
 
 # CHAZ — layer 5 (Compliance & Enforcement Tracking - all active facilities)
 # Fields: ME_NAME, HANDLER_ID, FAC_INS_TYPE, GENERATOR, PERMITTED_CONSENTED
@@ -174,21 +176,41 @@ def fuds(lat, lon, radius_miles):
 # ── CERCLA ────────────────────────────────────────────────────────────────────
 
 def cercla(lat, lon, radius_miles):
+    # HIFLD CERCLA non-NPL layer — CERCLIS sites not on NPL (active only)
+    # Primary source: NASA HIFLD open data CERCLA Information System Facilities
     data = arcgis_query(
-        "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/22/query",
+        "https://maps.nccs.nasa.gov/mapping/rest/services/hifld_open/chemicals/FeatureServer/0/query",
         lat, lon, radius_miles,
-        out_fields="PRIMARY_NAME,ACTIVE_STATUS,LATITUDE83,LONGITUDE83")
-    if "error" in data:
-        return {"count": 0, "sites": [], "error": data["error"]}
+        out_fields="REGISTRY_ID,NAME,STATE,LATITUDE,LONGITUDE")
+    if "error" not in data and data.get("features"):
+        sites = []
+        for feat in data.get("features", []):
+            attrs = feat.get("attributes", {})
+            geom  = feat.get("geometry", {})
+            name  = str(attrs.get("NAME") or "Unknown CERCLA Site")
+            flat  = float(attrs.get("LATITUDE", 0) or geom.get("y", 0))
+            flon  = float(attrs.get("LONGITUDE", 0) or geom.get("x", 0))
+            dist  = round(haversine(lat, lon, flat, flon), 2) if flat else 999.0
+            sites.append({"name": name, "distance": dist, "status": "Active CERCLA Non-NPL", "nc": True})
+        sites.sort(key=lambda s: s["distance"])
+        return {"count": len(sites), "sites": sites}
+    # Fallback: FRS SEMS layer without NPL filter (catches NFRAP/archived too)
+    data2 = arcgis_query(
+        "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/21/query",
+        lat, lon, radius_miles,
+        out_fields="PRIMARY_NAME,NPL_STATUS_NAME,LATITUDE83,LONGITUDE83")
     sites = []
-    for feat in data.get("features", []):
+    for feat in data2.get("features", []):
         attrs  = feat.get("attributes", {})
         geom   = feat.get("geometry", {})
-        status = attrs.get("ACTIVE_STATUS","") or ""
-        flat   = float(attrs.get("LATITUDE83",  0) or geom.get("y", 0))
-        flon   = float(attrs.get("LONGITUDE83", 0) or geom.get("x", 0))
-        dist   = round(haversine(lat, lon, flat, flon), 2) if flat else 999.0
-        nc     = status.upper() not in {"ARCHIVED","INACTIVE","NFRAP","DELETED"}
+        status = attrs.get("NPL_STATUS_NAME","") or ""
+        # Exclude active/proposed NPL — those are already in the NPL query
+        if status in ["Currently on the Final NPL","Proposed for NPL"]:
+            continue
+        flat = float(attrs.get("LATITUDE83", 0) or geom.get("y", 0))
+        flon = float(attrs.get("LONGITUDE83", 0) or geom.get("x", 0))
+        dist = round(haversine(lat, lon, flat, flon), 2) if flat else 999.0
+        nc   = status.upper() not in {"DELETED FROM THE FINAL NPL"}
         sites.append({"name":attrs.get("PRIMARY_NAME","Unknown"),"distance":dist,"status":status,"nc":nc})
     sites.sort(key=lambda s: s["distance"])
     return {"count": len(sites), "sites": sites}
@@ -283,6 +305,31 @@ def query():
                 seen.add(s["name"]); deduped.append(s)
         return {"count": len(deduped), "sites": deduped}
 
+    def get_brownfields():
+        # FDEP brownfields from DEP Cleanup layer 0
+        fdep_data  = arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=BROWN_WHERE, out_fields=DEP_FIELDS)
+        fdep_sites = parse_features(fdep_data, lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)
+        # EPA CIMC brownfields from ACRES (FRS_INTERESTS layer 0)
+        epa_data   = arcgis_query(EPA_BROWNFIELDS, lat, lon, 0.5, out_fields="PRIMARY_NAME,LATITUDE83,LONGITUDE83,SITE_STATUS")
+        epa_sites  = []
+        for feat in epa_data.get("features", []):
+            attrs = feat.get("attributes", {})
+            geom  = feat.get("geometry", {})
+            name  = str(attrs.get("PRIMARY_NAME") or "Unknown")
+            flat  = float(attrs.get("LATITUDE83", 0) or geom.get("y", 0))
+            flon  = float(attrs.get("LONGITUDE83", 0) or geom.get("x", 0))
+            dist  = round(haversine(lat, lon, flat, flon), 2) if flat else 999.0
+            status = str(attrs.get("SITE_STATUS","") or "")
+            nc    = status.upper() not in {"COMPLETE","COMPLETED","DELETED","ARCHIVED"}
+            epa_sites.append({"name": name, "distance": dist, "status": status, "nc": nc})
+        # Merge and deduplicate by name
+        seen = set()
+        deduped = []
+        for s in sorted(fdep_sites + epa_sites, key=lambda x: x["distance"]):
+            if s["name"] not in seen:
+                seen.add(s["name"]); deduped.append(s)
+        return {"count": len(deduped), "sites": deduped}
+
     task_map = {
         "npl":            lambda: frs_npl(lat, lon, 1.0, status_filter=["Currently on the Final NPL","Proposed for NPL"]),
         "fuds":           lambda: fuds(lat, lon, 1.0),
@@ -293,10 +340,10 @@ def query():
         "rcra_tsd":       lambda: echo_rcra(lat, lon, 0.5, "TSD"),
         "haz":            get_haz,
         "cont":           lambda: (lambda p: {"count": len(p), "sites": p})(parse_features(arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=CONT_WHERE, out_fields=DEP_FIELDS), lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)),
-        "solid":          lambda: (lambda p: {"count": len(p), "sites": p})(parse_features(arcgis_query(SOLID_WASTE, lat, lon, 0.5, where="FACILITY_STATUS NOT IN ('Closed','Inactive','CLOSED','INACTIVE')", out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"), lat, lon, "FACILITY_NAME", "FACILITY_STATUS", {"Active","ACTIVE","Open","OPEN","active","Active, No Gw Monitoring","Partially Closed"})),
+        "solid":          lambda: (lambda p: {"count": len(p), "sites": p})(parse_features(arcgis_query(SOLID_WASTE, lat, lon, 0.5, where="FACILITY_STATUS NOT IN ('Closed','Inactive','CLOSED','INACTIVE','Closed, No Gw Monitoring','Closed, Gw Monitoring')", out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"), lat, lon, "FACILITY_NAME", "FACILITY_STATUS", {"Active","ACTIVE","Open","OPEN","active","Active, No Gw Monitoring","Partially Closed","Authorized To Operate","Authorized to Operate"})),
         "lust":           get_lust,
         "vol":            lambda: (lambda p: {"count": len(p), "sites": p})(parse_features(arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=VOL_WHERE, out_fields=DEP_FIELDS), lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)),
-        "brown":          lambda: (lambda p: {"count": len(p), "sites": p})(parse_features(arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=BROWN_WHERE, out_fields=DEP_FIELDS), lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)),
+        "brown":          get_brownfields,
         "ust":            lambda: (lambda p: {"count": len(p), "sites": p})(parse_features(arcgis_query(STCM_TANKS, lat, lon, 0.15, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"), lat, lon, "FACILITY_NAME", "FACILITY_STATUS", {"Active","ACTIVE","Open","OPEN"})),
         "rcra_gen":       lambda: echo_rcra(lat, lon, 0.15, "LQG,SQG,VSQG"),
         "ic":             lambda: (lambda p: {"count": len(p), "sites": p})(parse_features(arcgis_query(ICR, lat, lon, 0.05, out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE"), lat, lon, "SITE_NAME", "IC_STATUS", {"ACTIVE","Active"})),
@@ -328,12 +375,13 @@ def debug():
         "chaz":          lambda: arcgis_query(CHAZ, lat, lon, 0.5, out_fields="ME_NAME,FAC_INS_TYPE,GENERATOR,PERMITTED_CONSENTED"),
         "stcm_lust":     lambda: arcgis_query(STCM_LUST, lat, lon, 0.5, out_fields="SITE_NAME,SITE_STATUS,DISCHARGE_DATE"),
         "stcm_tanks":    lambda: arcgis_query(STCM_TANKS, lat, lon, 0.15, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"),
-        "solid":         lambda: arcgis_query(SOLID_WASTE, lat, lon, 0.5, where="FACILITY_STATUS NOT IN ('Closed','Inactive','CLOSED','INACTIVE')", out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"),
+        "solid":         lambda: arcgis_query(SOLID_WASTE, lat, lon, 0.5, where="FACILITY_STATUS NOT IN ('Closed','Inactive','CLOSED','INACTIVE','Closed, No Gw Monitoring','Closed, Gw Monitoring')", out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"),
         "ic":            lambda: arcgis_query(ICR, lat, lon, 0.05, out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE"),
         "dep_cont":      lambda: arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=CONT_WHERE, out_fields=DEP_FIELDS),
         "dep_lust":      lambda: arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=LUST_WHERE, out_fields=DEP_FIELDS),
         "dep_vol":       lambda: arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=VOL_WHERE, out_fields=DEP_FIELDS),
         "dep_brown":     lambda: arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=BROWN_WHERE, out_fields=DEP_FIELDS),
+        "epa_brownfields":lambda: arcgis_query(EPA_BROWNFIELDS, lat, lon, 0.5, out_fields="PRIMARY_NAME,LATITUDE83,LONGITUDE83,SITE_STATUS"),
         "dep_super":     lambda: arcgis_query(DEP_CLEANUP, lat, lon, 1.0, where=SUPER_WHERE, out_fields=DEP_FIELDS),
         "fl_superfund":  lambda: arcgis_query(FL_SUPERFUND, lat, lon, 1.0, out_fields="BUSINESS_NAME,RSC2_REMEDIATION_STATUS_KEY,CLCC_CLEANUP_CATEGORY_KEY"),
         "echo_rcra_ca":  lambda: echo_rcra(lat, lon, 1.0, "CA"),
@@ -342,6 +390,7 @@ def debug():
         "frs_npl":       lambda: frs_npl(lat, lon, 1.0),
         "fuds":          lambda: fuds(lat, lon, 1.0),
         "cercla":        lambda: cercla(lat, lon, 0.5),
+        "hifld_cercla":  lambda: arcgis_query("https://maps.nccs.nasa.gov/mapping/rest/services/hifld_open/chemicals/FeatureServer/0/query", lat, lon, 0.5, out_fields="REGISTRY_ID,NAME,STATE,LATITUDE,LONGITUDE"),
     }
     if db not in routes:
         return jsonify({"error": f"unknown db '{db}'", "options": list(routes.keys())}), 400
