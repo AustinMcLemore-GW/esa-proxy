@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.21
+Phase I ESA Database Proxy — v9.22
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -617,7 +617,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.21", "name": "Phase I ESA Proxy v9.21"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.22", "name": "Phase I ESA Proxy v9.22"})
 
 @app.route("/browndebug", methods=["GET"])
 def browndebug():
@@ -711,35 +711,52 @@ def superdebug():
 def fudsdebug():
     """Test multiple FUDS URL candidates to find the working one."""
     results = {}
-    candidates = [
-        # NASA HIFLD mirror — property boundaries (polygon, use centroid_x/centroid_y)
-        "https://maps.nccs.nasa.gov/mapping/rest/services/hifld_open/government/FeatureServer/9",
-        # HIFLD geoplatform
-        "https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/FUDS_Public_Properties/FeatureServer/0",
-        # Alternate HIFLD
-        "https://services.arcgis.com/jIL9msH9OI208GCb/arcgis/rest/services/HIFLD/FeatureServer/48",
-        # USACE geospatial portal
-        "https://geospatial.sec.usace.army.mil/server/rest/services/FUDS/FUDS_Public_Property_Points/FeatureServer/0",
-        "https://geospatial.sec.usace.army.mil/server/rest/services/FUDS/FUDS_Projects/FeatureServer/0",
-        # ArcGIS Online hosted
-        "https://services2.arcgis.com/FiaFA0dzneARZCGJ/arcgis/rest/services/FUDS_Public_Property_Points/FeatureServer/0",
-    ]
-    for url in candidates:
-        key = url.split("/")[-3] + "/" + url.split("/")[-1]
-        try:
-            r = requests.get(url, params={"f":"json"}, timeout=10)
-            data = r.json()
-            if "fields" in data:
-                results[key] = {
-                    "status": "OK",
-                    "name": data.get("name"),
-                    "fields": [f["name"] for f in data.get("fields", [])[:10]],
-                    "url": url
-                }
-            else:
-                results[key] = {"status": "no fields", "response": str(data)[:200]}
-        except Exception as e:
-            results[key] = {"status": "error", "error": str(e)}
+    # Test the original URL with centroid_x/centroid_y fields instead of LATITUDE/LONGITUDE
+    url = "https://services7.arcgis.com/n1YM8pTrFmm7L4hs/arcgis/rest/services/FUDS_Projects/FeatureServer/0/query"
+    results = {}
+
+    # Test 1: get one FL record with all fields to see what's available
+    try:
+        r = requests.get(url, params={
+            "where": "STATE_CODE='FL'",
+            "outFields": "*",
+            "resultRecordCount": "1",
+            "returnGeometry": "true",
+            "f": "json"
+        }, timeout=15)
+        results["sample_record"] = r.json()
+    except Exception as e:
+        results["sample_error"] = str(e)
+
+    # Test 2: WHERE on centroid_x/centroid_y
+    try:
+        r = requests.get(url, params={
+            "where": "centroid_x >= -82.75 AND centroid_x <= -82.70 AND centroid_y >= 28.00 AND centroid_y <= 28.07",
+            "outFields": "PROPERTY_NAME,PROJECT_STATUS,STATE_CODE,centroid_x,centroid_y",
+            "returnGeometry": "false",
+            "f": "json"
+        }, timeout=15)
+        results["centroid_where"] = r.json()
+    except Exception as e:
+        results["centroid_error"] = str(e)
+
+    # Test 3: spatial query with geometry
+    try:
+        r = requests.get(url, params={
+            "geometry": "-82.75,28.00,-82.70,28.07",
+            "geometryType": "esriGeometryEnvelope",
+            "spatialRel": "esriSpatialRelIntersects",
+            "inSR": "4326",
+            "outSR": "4326",
+            "outFields": "PROPERTY_NAME,PROJECT_STATUS,STATE_CODE",
+            "returnGeometry": "true",
+            "f": "json"
+        }, timeout=15)
+        results["spatial_query"] = r.json()
+    except Exception as e:
+        results["spatial_error"] = str(e)
+
+    candidates = []  # unused now
     return jsonify(results)
 
 
