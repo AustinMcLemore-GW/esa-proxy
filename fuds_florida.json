@@ -1,0 +1,3146 @@
+{
+  "fiscal_year": "FY2024",
+  "update_reminder": "Update annually when USACE releases new fiscal year data. Download from: https://geospatial-usace.opendata.arcgis.com/datasets/3f8354667d5b4b1b8ad7a6e00c3cf3b1_1",
+  "next_update_due": "October 2025 (FY2025 data release)",
+  "record_count": 523,
+  "sites": [
+    {
+      "name": "NIKE HM-69 EVERGLADES",
+      "lat": 25.36861111,
+      "lon": -80.68388889,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "WITHAM FIELD",
+      "lat": 27.18111111,
+      "lon": -80.22194444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MACDILL MIL AF",
+      "lat": 27.84944444,
+      "lon": -82.50972222,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "HERLONG AIRPORT",
+      "lat": 30.27,
+      "lon": -81.81,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MILITARY AF",
+      "lat": 28.54416667,
+      "lon": -81.33611111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CAMP BLANDING",
+      "lat": 29.94916667,
+      "lon": -81.98583333,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "ORLANDO EXECUTIVE AIRPORT",
+      "lat": 28.54638889,
+      "lon": -81.33555556,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "KAY LARKIN AIRPORT",
+      "lat": 29.65805556,
+      "lon": -81.68888889,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "FORT DADE",
+      "lat": 27.58972222,
+      "lon": -82.76305556,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "MACDILL ILS OUTER MARKER ANX",
+      "lat": 27.91027778,
+      "lon": -82.46111111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "WINTER HAVEN-S GIL AIRPORT",
+      "lat": 28.06111111,
+      "lon": -81.75388889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "NAS BANANA RIVER OFF-BASE DISPOSAL AREA",
+      "lat": 28.20613904,
+      "lon": -80.59929554,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "ALBERT WHITTED AIRPORT",
+      "lat": 27.765,
+      "lon": -82.62694444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "RICHMOND NAS",
+      "lat": 25.61805556,
+      "lon": -80.40138889,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "APALACHICOLA AAF",
+      "lat": 29.72833333,
+      "lon": -85.03,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FT BARRANCAS FIRING RANGE",
+      "lat": 30.30805556,
+      "lon": -87.375,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MARIANNA AAF",
+      "lat": 30.83638889,
+      "lon": -85.18527778,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MORENO PT MIL RESERVATION",
+      "lat": 30.3875,
+      "lon": -86.45833333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FORT PICKENS",
+      "lat": 30.32805556,
+      "lon": -87.29888889,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "ST GEORGE ISLAND BOMB RANGE",
+      "lat": 29.6625,
+      "lon": -84.86833333,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "FORT BARRANCAS",
+      "lat": 30.34666667,
+      "lon": -87.29694444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "BROOKSVILLE AAF",
+      "lat": 28.47027778,
+      "lon": -82.45916667,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "BUSHNELL ARMY AIRFIELD",
+      "lat": 28.67916667,
+      "lon": -82.08916667,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "ST JOSEPH BAY MIL RESERVATION",
+      "lat": 29.81666667,
+      "lon": -85.3,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "AMELIA CITY BOMB TARGET",
+      "lat": 30.59251,
+      "lon": -81.42468,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ANASTASIA ISLAND REC",
+      "lat": 29.8969,
+      "lon": -81.42468,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ANASTASIA ISLAND MIL RES",
+      "lat": 29.87388889,
+      "lon": -81.27694444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "WITHLACOOCHEE CWS SITE",
+      "lat": 28.48027778,
+      "lon": -82.0325,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "FT JEFFERSON NATIONAL MONUMENT",
+      "lat": 24.628401,
+      "lon": -82.873001,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "CANOVA BEACH TRACK ANX",
+      "lat": 28.10555556,
+      "lon": -80.57111111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PAGE FIELD MIL RESERVATION",
+      "lat": 26.58666667,
+      "lon": -81.86444444,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "LEE FIELD",
+      "lat": 29.97666667,
+      "lon": -81.65833333,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "CAMP MURPHY",
+      "lat": 27.01694444,
+      "lon": -80.12805556,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "NIKE HM-39",
+      "lat": 25.44555556,
+      "lon": -80.35305556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "NIKE HM-59 HOMESTEAD",
+      "lat": 25.37472222,
+      "lon": -80.48333333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "NIKE HM-12",
+      "lat": 25.56111111,
+      "lon": -80.32944444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "NIKE HM-84",
+      "lat": 25.56638889,
+      "lon": -80.52861111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FT LAUDERDALE BOMB TARGET 1",
+      "lat": 26.12861111,
+      "lon": -80.46027778,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "FT LAUDERDALE BOMB TARGET 2",
+      "lat": 26.12166667,
+      "lon": -80.38166667,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "FT LAUDERDALE BOMB TARGET 3",
+      "lat": 26.06583333,
+      "lon": -80.38583333,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "FT LAUDERDALE BOMB TARGET 4",
+      "lat": 25.92111111,
+      "lon": -80.445,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "FT LAUDERDALE BOMB TARGET 5",
+      "lat": 26.06777778,
+      "lon": -80.45027778,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "FT LAUDERDALE BOMB TARGET 6",
+      "lat": 26.00305556,
+      "lon": -80.35,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "FT LAUDERDALE BOMB TARGET 7",
+      "lat": 25.98111111,
+      "lon": -80.41611111,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "FT LAUDERDALE BOMB TARGET 8",
+      "lat": 26.03472222,
+      "lon": -80.42166667,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "FT LAUDERDALE N STRAFING TARGET",
+      "lat": 26.19888889,
+      "lon": -80.43277778,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "FT LAUDERDALE S STRAFING TARGET",
+      "lat": 26.15861111,
+      "lon": -80.42444444,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "ZEPHYR HILLS CITY AIRPORT",
+      "lat": 28.22666667,
+      "lon": -82.15722222,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "BELL FIELD",
+      "lat": 27.45277778,
+      "lon": -80.48916667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "BISCAYNE KEY MIL RESERVATION",
+      "lat": 25.69694444,
+      "lon": -80.16194444,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "BOSTWICK SATELLITE FIELD",
+      "lat": 29.78333333,
+      "lon": -81.64888889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CAMP GORDON JOHNSTON",
+      "lat": 29.94472222,
+      "lon": -84.42305556,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "CAMPVILLE SATELLITE FIELD",
+      "lat": 29.6637,
+      "lon": -82.082901,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "CARLISLE",
+      "lat": 29.895,
+      "lon": -81.64,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CARLSTROM FIELD",
+      "lat": 27.12833333,
+      "lon": -81.8025,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "CAYO COSTA MIL RESERVATION",
+      "lat": 26.69611111,
+      "lon": -82.25138889,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "CEDAR KEY ISLAND",
+      "lat": 29.09666667,
+      "lon": -83.06722222,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CUMMER FIELD",
+      "lat": 30.2225,
+      "lon": -82.14722222,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "DALE MABRY AAF",
+      "lat": 30.44305556,
+      "lon": -84.33666667,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "DORR FIELD",
+      "lat": 27.20194444,
+      "lon": -81.66944444,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "FLEMINGS ISLAND SAT FIELD",
+      "lat": 30.08111111,
+      "lon": -81.71694444,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "FOREMOST SATELLITE FIELD",
+      "lat": 30.01361111,
+      "lon": -81.805,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FORT BROOKE",
+      "lat": 27.95305556,
+      "lon": -82.44611111,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "FORT CLINCH",
+      "lat": 30.70361111,
+      "lon": -81.45472222,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "FT MARION NATIONAL MONUMENT",
+      "lat": 29.89805556,
+      "lon": -81.31194444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FORT MATANZAS",
+      "lat": 29.71,
+      "lon": -81.23694444,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "FT PIERCE SATELLITE FIELD",
+      "lat": 27.4925,
+      "lon": -80.36555556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FRANCIS SATELLITE FIELD",
+      "lat": 29.985,
+      "lon": -81.45888889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "GASPARILLA ISLAND",
+      "lat": 26.73444444,
+      "lon": -82.26083333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "HART FIELD",
+      "lat": 30.33194444,
+      "lon": -81.75611111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "JACKSONVILLE HEIGHTS AUX AF",
+      "lat": 30.27694444,
+      "lon": -81.77305556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "JACKSONVILLE SMALL ARMS RANGE",
+      "lat": 30.44694444,
+      "lon": -81.66111111,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "KEYSTONE AAF RIFLE RANGE",
+      "lat": 29.84805556,
+      "lon": -82.06166667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "LAKE HANCOCK SMALL ARMS & BOMBING",
+      "lat": 27.95388889,
+      "lon": -81.83777778,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "LAKELAND SMALL ARMS RANGE",
+      "lat": 27.95638889,
+      "lon": -82.03472222,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "LANTANA AIRPORT",
+      "lat": 26.59305556,
+      "lon": -80.08694444,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "LEESBURG AIR SERVICE CENTER",
+      "lat": 28.810101,
+      "lon": -81.9683,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "ALLIANCE AUX FIELD 4",
+      "lat": 30.6,
+      "lon": -85.10416667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "BASCOM AUX FIELD 3",
+      "lat": 30.96805556,
+      "lon": -85.06805556,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "BALD PT FIRE CONTROL",
+      "lat": 30.38333333,
+      "lon": -87.13333333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "EGLIN GULF TEST RANGE",
+      "lat": 29.70472222,
+      "lon": -85.37888889,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "ELLIS AUX FIELD NO 1",
+      "lat": 30.91111111,
+      "lon": -85.25,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "LEESBURG POW CAMP",
+      "lat": 28.82388889,
+      "lon": -81.99138889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "LYNN HAVEN DEFENSE FUEL SP",
+      "lat": 30.24722222,
+      "lon": -85.67305556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "LONG BOAT KEY BOMB & GUN RANGE",
+      "lat": 27.40222222,
+      "lon": -82.64972222,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "FORT MCREE",
+      "lat": 30.32472222,
+      "lon": -87.315,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PENSACOLA BEACH AAAIS",
+      "lat": 30.33194444,
+      "lon": -87.14305556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PENSACOLA MIL RESERVATION",
+      "lat": 30.36666667,
+      "lon": -87.13333333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "RED BLUFF FIRE CONTROL TOWER",
+      "lat": 30.32611111,
+      "lon": -87.37166667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MARCO ISLAND CRASH BOAT DOCKS",
+      "lat": 25.9725,
+      "lon": -81.73083333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "SANTA ROSA AWS STATION 30",
+      "lat": 30.38333333,
+      "lon": -87.13333333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "BUCKINGHAM AFB",
+      "lat": 26.63777778,
+      "lon": -81.70916667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "BOCA RATON AAF",
+      "lat": 26.375,
+      "lon": -80.10416667,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "ENG AVIATION TRAINING AREA",
+      "lat": 28.66416667,
+      "lon": -81.13583333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ARADCOM FAC, MONROE",
+      "lat": 24.59194444,
+      "lon": -81.705,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ALACHUA AAF",
+      "lat": 29.69111111,
+      "lon": -82.27611111,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "CHAPMAN FIELD",
+      "lat": 25.63916667,
+      "lon": -80.28027778,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "CONNERS FIELD",
+      "lat": 27.26583333,
+      "lon": -80.85194444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CROSS CITY AAF",
+      "lat": 29.63444444,
+      "lon": -83.10305556,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "DUNNELLON AAF",
+      "lat": 29.06305556,
+      "lon": -82.37333333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MAXVILLE SATELLITE FIELD",
+      "lat": 30.21111111,
+      "lon": -81.94694444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "USAF RESERVE FERNANDINA",
+      "lat": 30.6175,
+      "lon": -81.46611111,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "FT MYERS BOMB & GUN RANGE",
+      "lat": 26.8575,
+      "lon": -81.79277778,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "HENDRICKS AAF",
+      "lat": 27.45333333,
+      "lon": -81.34638889,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "HILLSBOROUGH ARMY AIR FIELD",
+      "lat": 28.043616,
+      "lon": -82.416303,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "IMMOKALEE MUNICIPAL AIRPORT",
+      "lat": 26.43611111,
+      "lon": -81.39666667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "JACKSONVILLE OIL TERMINAL",
+      "lat": 30.40138889,
+      "lon": -81.62722222,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "KEYSTONE AAF",
+      "lat": 29.84472222,
+      "lon": -82.05,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "KEY WEST INTL AIRPORT",
+      "lat": 24.55611111,
+      "lon": -81.75888889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "KISSIMMEE AAF",
+      "lat": 28.28888889,
+      "lon": -81.43694444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "Lake Bryant Bombing and Gunnery Range",
+      "lat": 29.0707,
+      "lon": -81.733002,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "LAKE WALES MUN AIRPORT AUX",
+      "lat": 27.89666667,
+      "lon": -81.61611111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "LAKELAND AAF",
+      "lat": 27.995,
+      "lon": -82.03305556,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "LEESBURG AAF",
+      "lat": 28.82194444,
+      "lon": -81.8075,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "MARQUESAS KEY",
+      "lat": 24.59611111,
+      "lon": -82.12694444,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "MINORVILLE QUARTERMASTER DEPOT",
+      "lat": 28.53333333,
+      "lon": -81.53333333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "WILLISTON MUN AIRPORT",
+      "lat": 29.35194444,
+      "lon": -82.47361111,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "AIR-TO-GROUND GUN RANGE IN BRONSON",
+      "lat": 29.3825,
+      "lon": -82.58805556,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "RIFLE RANGE MORRISON AAF",
+      "lat": 26.72305556,
+      "lon": -80.08111111,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "MULLET KEY BOMB & GUN RANGE",
+      "lat": 27.61611111,
+      "lon": -82.73611111,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "NAPLES AAF",
+      "lat": 26.15055556,
+      "lon": -81.77555556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PERRY AAF",
+      "lat": 30.07194444,
+      "lon": -83.57777778,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MELBOURNE BEACH TRACK AX",
+      "lat": 28.05194444,
+      "lon": -80.55,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PINELLAS AAF",
+      "lat": 27.90888889,
+      "lon": -82.68888889,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "PINELLAS PRACTICE BOMB RANGE",
+      "lat": 28.035,
+      "lon": -82.71638889,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "PUNTA GORDA ARMY AAF",
+      "lat": 26.91916667,
+      "lon": -81.99361111,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "PUNTA GORDA MUN AIRPORT",
+      "lat": 26.93333333,
+      "lon": -82.05,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "SOPCHOPPY PRECISION BOMB RANGE",
+      "lat": 30.05361111,
+      "lon": -84.57055556,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "SARASOTA AAF",
+      "lat": 27.39472222,
+      "lon": -82.55472222,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "ENG BOARD FIELD STATION",
+      "lat": 27.64861111,
+      "lon": -80.35472222,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "VENICE AAF",
+      "lat": 27.06916667,
+      "lon": -82.43888889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MERRITT ISLAND TRACK ANX",
+      "lat": 28.34416667,
+      "lon": -80.69166667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "GOTHA ORDNANCE DEPOT",
+      "lat": 28.52916667,
+      "lon": -81.52166667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "HORSESHOE POINT RADIO AX 10",
+      "lat": 29.46805556,
+      "lon": -83.305,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "JENSEN AWS STATION NO 24",
+      "lat": 27.24611111,
+      "lon": -80.23166667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "LAKE OKEECHOBEE AC BEACON AX",
+      "lat": 26.86611111,
+      "lon": -80.63111111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MARCO ISLAND MISSILE TRACKING ANNEX D7",
+      "lat": 25.91666667,
+      "lon": -81.71666667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MIDDLEBURG SATELLITE FIELD",
+      "lat": 30.10805556,
+      "lon": -81.83888889,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "MO DORA AAA SEARCHLIGHT",
+      "lat": 28.77027778,
+      "lon": -81.64416667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MCCOY AFB INNER TVOR",
+      "lat": 28.31694444,
+      "lon": -81.32,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ORLANDO AIR BASE RADIO",
+      "lat": 28.52111111,
+      "lon": -81.30222222,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PRATT GENERAL HOSPITAL",
+      "lat": 25.74083333,
+      "lon": -80.27972222,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "UMATILLA AAA SEARCHLIGHT",
+      "lat": 28.94333333,
+      "lon": -81.66222222,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "WICKERS STADIUM KEY WEST",
+      "lat": 24.56111111,
+      "lon": -81.775,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ANNA MARIA AWS & TRAINING FAC",
+      "lat": 27.53694444,
+      "lon": -82.74194444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CANNON-MILLS AIRPORT",
+      "lat": 28.53333333,
+      "lon": -81.3,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FORT TAYLOR",
+      "lat": 24.54722222,
+      "lon": -81.81083333,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "ARADCOM FAC B BATTERY H 10",
+      "lat": 25.46861111,
+      "lon": -80.40111111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "NIKE HM-95 USAF HOMESTEAD",
+      "lat": 25.75472222,
+      "lon": -80.49138889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ALLENHURST RR AX",
+      "lat": 28.71722222,
+      "lon": -80.73277778,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "BANANA RIVER HOUSING",
+      "lat": 28.12638889,
+      "lon": -80.63194444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ARNDCOM FAC",
+      "lat": 28.15722222,
+      "lon": -80.59166667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "BORESIGHT TOWER - PT CANAVERAL",
+      "lat": 28.405,
+      "lon": -80.60694444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CAPE CANAVERAL AWS STATION 23",
+      "lat": 28.61111111,
+      "lon": -80.59805556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CLARKS SIDING MISSILE FUEL ANNEX",
+      "lat": 28.55,
+      "lon": -80.79694444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FALSE CAPE DATA COLL AX",
+      "lat": 28.58472222,
+      "lon": -80.57972222,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MELBOURNE HELIUM ANNEX",
+      "lat": 28.093901,
+      "lon": -80.629997,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "PLAY-LINDA TRACKING AX",
+      "lat": 28.64333333,
+      "lon": -80.62416667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "Valkaria Missile Tracking Annex",
+      "lat": 27.95583333,
+      "lon": -80.55777778,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "FT LAUDERDALE GUN",
+      "lat": 26.11388889,
+      "lon": -80.10611111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FT LAUDERDALE NAS",
+      "lat": 26.07111111,
+      "lon": -80.15333333,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "GILCHRIST RR AX #4",
+      "lat": 26.75,
+      "lon": -81.91666667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "SATELLITE TRACKING STATION CAMP BL",
+      "lat": 29.9825,
+      "lon": -81.96722222,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "AAF REG & CONVALESCENT HOSPITAL",
+      "lat": 25.81194444,
+      "lon": -80.13888889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MIAMI CRYSTAL ICE CO",
+      "lat": 25.79611111,
+      "lon": -80.21305556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ARADCOM FAC, DADE",
+      "lat": 25.54277778,
+      "lon": -80.41333333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ARADCOM FAC NO. 2",
+      "lat": 25.51194444,
+      "lon": -80.53638889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ARADCOM FAC NO 3",
+      "lat": 25.40611111,
+      "lon": -80.56833333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ARADCOM FAC NO. 6",
+      "lat": 25.67111111,
+      "lon": -80.43611111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ARADCOM FAC  NO.7A",
+      "lat": 25.56055556,
+      "lon": -80.33888889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ARADCOM FAC  NO. 8",
+      "lat": 25.95138889,
+      "lon": -80.28444444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ARADCOM FAC  NO. 9",
+      "lat": 25.4125,
+      "lon": -80.53944444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "HOMESTEAD AAF",
+      "lat": 25.51388889,
+      "lon": -80.39222222,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "HOMESTEAD RADIO BEACON AX",
+      "lat": 25.41666667,
+      "lon": -80.5,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "USAF CUTLER RID PARACHUTE DROP",
+      "lat": 25.55,
+      "lon": -80.36611111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "USAF HELICOPTER ANX",
+      "lat": 25.7,
+      "lon": -80.16666667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MIAMI INT'L AIRPORT",
+      "lat": 25.79666667,
+      "lon": -80.28861111,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "MIAMI BEACH AWS STATION 25",
+      "lat": 25.76111111,
+      "lon": -80.13611111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MIAMI COLD STORAGE PLANT",
+      "lat": 25.83833333,
+      "lon": -80.21166667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MIAMI DRY STORAGE WAREHOUSE",
+      "lat": 25.84,
+      "lon": -80.205,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MIAMI RADIO SITE",
+      "lat": 25.85888889,
+      "lon": -80.31472222,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MIAMI UNLOAD PLATFORMS",
+      "lat": 25.81194444,
+      "lon": -80.19,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "OPA LOCKA AIRPORT",
+      "lat": 25.90861111,
+      "lon": -80.27805556,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "SIDELL RADIO RELAY AX 3",
+      "lat": 27.19277778,
+      "lon": -82.0525,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "USAF AC & W FAC",
+      "lat": 29.635,
+      "lon": -83.08472222,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "COASTAL DEFENSE ATLANTIC BEACH",
+      "lat": 30.36655,
+      "lon": -81.39777,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "JACKSONVILLE AACS RAD",
+      "lat": 30.33333333,
+      "lon": -81.66666667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "JACKSONVILLE MUNICIPAL AIRPORT #2 (Craig Field)",
+      "lat": 30.33611111,
+      "lon": -81.51111111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MAYPORT AWS STATION 21",
+      "lat": 30.38416667,
+      "lon": -81.4,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ATLANTIC BEACH REC SITE",
+      "lat": 30.35055556,
+      "lon": -81.4125,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "USAF IMESON AIRPORT",
+      "lat": 30.42305556,
+      "lon": -81.64194444,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "FLAGLER BEACON AWS STA 22",
+      "lat": 29.46666667,
+      "lon": -81.13333333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "Avon Park Army Airfield",
+      "lat": 27.54638889,
+      "lon": -81.09805556,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "DREW FIELD",
+      "lat": 27.98555556,
+      "lon": -82.53388889,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "GASDEN PARK HOMES SITE",
+      "lat": 27.86666667,
+      "lon": -82.51666667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MACDILL COMM ANX",
+      "lat": 27.89194444,
+      "lon": -82.50166667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "USAF MACDILL ILS MID",
+      "lat": 27.86611111,
+      "lon": -82.50388889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FELLSMERE TRACKING ANX",
+      "lat": 27.76722222,
+      "lon": -80.5525,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "USAF FELLSMORE AX # 2",
+      "lat": 27.7625,
+      "lon": -80.58666667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "USAF VERO BEACH ANX",
+      "lat": 27.6771287,
+      "lon": -80.3629734,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MIAMI EMBARKATION POST",
+      "lat": 25.805,
+      "lon": -80.125,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "VERO BEACH AIRPORT DATA AX",
+      "lat": 27.665,
+      "lon": -80.425,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CLERMONT AWS  NO. 71",
+      "lat": 28.55277778,
+      "lon": -81.77527778,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "BONITA SPRING RADIO AX 5",
+      "lat": 26.35333333,
+      "lon": -81.78,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MILE BRANCH SATELLITE",
+      "lat": 30.23194444,
+      "lon": -81.80194444,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "BC-4 CAMERA SITES",
+      "lat": 26.83194444,
+      "lon": -82.26555556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FT LONESOME RADIO AX 2",
+      "lat": 27.96666667,
+      "lon": -82.46666667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "DEER LAKE DETENTION HOSPITAL",
+      "lat": 29.18,
+      "lon": -81.83111111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "JONATHAN DICKINSON DATA TESTING",
+      "lat": 27.02027778,
+      "lon": -80.11333333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "JUPITER ISLAND REC",
+      "lat": 27.01916667,
+      "lon": -80.0975,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ARADCOM FAC CASA MARIN",
+      "lat": 24.54694444,
+      "lon": -81.79,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ARADCOM REST BEACH",
+      "lat": 24.55,
+      "lon": -81.77805556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ARADCOM FAC SADDLEBUNCH KEY",
+      "lat": 24.61888889,
+      "lon": -81.60111111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ARADCOM FAC GEO A SMAT",
+      "lat": 24.55111111,
+      "lon": -81.77194444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "STOCK ISLAND FIRE CONTROL STATION",
+      "lat": 24.56305556,
+      "lon": -81.72694444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "NIKE HM-40 USAF HOMESTEAD",
+      "lat": 25.26166667,
+      "lon": -80.31444444,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "HILOLO CAMERA ANX",
+      "lat": 27.45055556,
+      "lon": -80.80333333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "BITHLO RADIO RELAY ANX",
+      "lat": 28.54666667,
+      "lon": -81.08861111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "USAF STATION CAPE CANAVERAL",
+      "lat": 28.40277778,
+      "lon": -80.60777778,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "USAF PT CANAVERAL STORAGE",
+      "lat": 28.40805556,
+      "lon": -80.60666667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MCCOY AFB",
+      "lat": 28.41361111,
+      "lon": -81.325,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "HOLOPAW DATA COLL AX",
+      "lat": 28.13888889,
+      "lon": -81.04,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "KENANSVILLE TRACK AX#1",
+      "lat": 27.84638889,
+      "lon": -80.97138889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "KENANSVILLE TRACK #2",
+      "lat": 27.94,
+      "lon": -81.12972222,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "KENANSVILLE TRACK AX#3",
+      "lat": 27.75472222,
+      "lon": -81.075,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "KISSIMMEE RADIO RELAY AX",
+      "lat": 28.29,
+      "lon": -81.43,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MCCOY RADIO BEACON AX",
+      "lat": 28.30111111,
+      "lon": -81.32805556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ORLANDO RADAR ANX OUTER MARKER",
+      "lat": 28.34305556,
+      "lon": -81.32611111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MORRISSON FIELD HOUSING",
+      "lat": 26.67388889,
+      "lon": -80.08611111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MORRISSON FIELD RADIO RANGE",
+      "lat": 26.50472222,
+      "lon": -80.13916667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PALM BEACH CRASH BOAT AX",
+      "lat": 26.77111111,
+      "lon": -80.04611111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PALM BEACH OUTER MARKER AX",
+      "lat": 26.67944444,
+      "lon": -80.175,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "USAF JUPITER MIS AX",
+      "lat": 26.95,
+      "lon": -80.08305556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PALM BEACH AFB",
+      "lat": 26.68138889,
+      "lon": -80.0925,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "MACDILL RADIO BEACON AX",
+      "lat": 28.2425,
+      "lon": -82.15222222,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "USAF ANCLOTE MIS AX",
+      "lat": 28.18972222,
+      "lon": -82.78944444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "AIR-TO-GROUND GUN RANGE PINELLAS",
+      "lat": 27.92833333,
+      "lon": -82.84222222,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "AAF CONVALESCENT CENTER",
+      "lat": 27.70694444,
+      "lon": -82.73333333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "INDIAN ROCKS AWS STATION 27",
+      "lat": 27.85166667,
+      "lon": -82.82194444,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "BARTOW  ARMY AIRFIELD",
+      "lat": 27.93555556,
+      "lon": -81.78388889,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "ALTAMONTE SPR TRACK AX",
+      "lat": 28.66666667,
+      "lon": -81.4,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "OSCEOLA TRACKING ANX",
+      "lat": 28.75,
+      "lon": -81.1,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "INDRIO CAMERA ANX NO.2",
+      "lat": 27.69083333,
+      "lon": -80.51305556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "OAK HILL RADIO REL AX",
+      "lat": 28.90388889,
+      "lon": -80.93027778,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ORANGE CITY TRACKING AX",
+      "lat": 28.93333333,
+      "lon": -81.28333333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "WELCH CONVALESCENT HOSPITAL",
+      "lat": 29.16666667,
+      "lon": -81.01666667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "USAF PONCE DE LEON ANX",
+      "lat": 29.0667,
+      "lon": -80.913101,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "USAR CLEARWATER",
+      "lat": 27.985,
+      "lon": -82.75138889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "USARC DAYTONA BEACH",
+      "lat": 29.18583333,
+      "lon": -81.06027778,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "USARC KEY WEST",
+      "lat": 24.56305556,
+      "lon": -81.76194444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "USARC FT MYERS",
+      "lat": 26.635,
+      "lon": -81.85527778,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "USAR KEY WEST KW-10",
+      "lat": 24.59611111,
+      "lon": -81.70194444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "USAR KEY WEST KW-24",
+      "lat": 24.575,
+      "lon": -81.66,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "USAR KEY WEST KW-80",
+      "lat": 24.59305556,
+      "lon": -81.79805556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "USAR MADISON NO. 2",
+      "lat": 30.46027778,
+      "lon": -83.41305556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "USARC OCALA",
+      "lat": 29.18611111,
+      "lon": -82.13722222,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "USAR PERRY",
+      "lat": 30.11666667,
+      "lon": -83.58333333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MILL COVE BOMBING SITE",
+      "lat": 30.12194444,
+      "lon": -81.71805556,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "USAR NAVAL RANGE CLEARANCE PROJ",
+      "lat": 27.59833333,
+      "lon": -80.33444444,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "USARC WAUCHULA",
+      "lat": 27.56666667,
+      "lon": -81.81638889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "NAS DAYTONA BEACH",
+      "lat": 29.18333333,
+      "lon": -81.06388889,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "NAS MELBOURNE",
+      "lat": 28.10111111,
+      "lon": -80.63694444,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "NO MANS LD ISLAND BOMB TARGET",
+      "lat": 30.49305556,
+      "lon": -81.42611111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "NOLAN PEELER WAREHOUSE",
+      "lat": 25.78111111,
+      "lon": -80.19,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "North Perry Satellite Field",
+      "lat": 26.0,
+      "lon": -80.24111111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "NORTH POMPANO SAT FIELD",
+      "lat": 26.24888889,
+      "lon": -80.11,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ORLANDO RANGE AND CHEMICAL YARD",
+      "lat": 28.53333333,
+      "lon": -81.28694444,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "ORLA VISTA RADAR CAMP",
+      "lat": 28.54305556,
+      "lon": -81.47166667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "OSPREY BOMBING RANGE",
+      "lat": 27.19333333,
+      "lon": -82.43861111,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "PASSAGE KEY AIR-TO-GROUND GUN",
+      "lat": 27.5562,
+      "lon": -82.7453,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "PATRICK / FT LAUDERDALE SUBCAB",
+      "lat": 26.09388889,
+      "lon": -80.12111111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PERRY BOMBING RANGE",
+      "lat": 30.217778,
+      "lon": -83.366667,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "PERRY GAP FILLER ANX",
+      "lat": 30.07861111,
+      "lon": -83.57805556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PINECASTLE JEEP RANGE",
+      "lat": 28.46666667,
+      "lon": -81.25,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "PINELLAS COUNTY FAIRGROUND",
+      "lat": 27.91444444,
+      "lon": -82.78611111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PLT PARK REPL DEPOT",
+      "lat": 27.93888889,
+      "lon": -82.46388889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "POMONA SATELLITE FIELD",
+      "lat": 29.50472222,
+      "lon": -81.58722222,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "REAM GENERAL HOSPITAL",
+      "lat": 26.71472222,
+      "lon": -80.03833333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "POMPANO MISSILE GUIDANCE ANNEX",
+      "lat": 26.24305556,
+      "lon": -80.11388889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "SARASOTA AAF SMALL ARMS RANGE",
+      "lat": 27.35666667,
+      "lon": -82.40833333,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "SING SADIES RADIO MONITOR",
+      "lat": 25.98805556,
+      "lon": -80.13777778,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "SPRUCE CREEK RES ANX",
+      "lat": 29.07055556,
+      "lon": -81.04333333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ST AUGUSTINE SAT FIELD",
+      "lat": 29.95805556,
+      "lon": -81.33805556,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "CHICOPIT BOMB TARGET",
+      "lat": 30.37694444,
+      "lon": -81.47111111,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "ST JOHNS BLUFF MIL",
+      "lat": 30.38333333,
+      "lon": -81.5,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "TEMPLE TERR RADIO BEACON",
+      "lat": 28.0325,
+      "lon": -82.37055556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "TITUSVILLE SAT GUN FIELD",
+      "lat": 28.51305556,
+      "lon": -80.79805556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "TROUT CREEK SATELLITE FIELD",
+      "lat": 30.00194444,
+      "lon": -81.55611111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "TWO ISLANDS NEAR ST AUGUSTINE",
+      "lat": 29.88194444,
+      "lon": -81.30388889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "VENICE BOMBING RANGE",
+      "lat": 27.03583333,
+      "lon": -82.33607204,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "WEST MARTELLO TOWER",
+      "lat": 24.54805556,
+      "lon": -81.78694444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "WEST PROSPECT SAT FIELD",
+      "lat": 26.19694444,
+      "lon": -80.16694444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "WHITEHOUSE SATELLITE FIELD",
+      "lat": 30.36194444,
+      "lon": -81.88,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "WILLIAMS POINT TRACK",
+      "lat": 28.45027778,
+      "lon": -80.7625,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "WINTER GARDEN GFA",
+      "lat": 28.56666667,
+      "lon": -81.58333333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "JANET",
+      "lat": 27.44805556,
+      "lon": -80.32638889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "GOLDEN GLADES HOUSING AREA",
+      "lat": 25.92,
+      "lon": -80.27111111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FLEMING ISLAND FAN MARKER & BEACON",
+      "lat": 30.13083333,
+      "lon": -81.69694444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "RADIO TRANSMITTER STATION",
+      "lat": 25.96277778,
+      "lon": -80.255,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "OPA LOCKA HOUSING AREA",
+      "lat": 25.89805556,
+      "lon": -80.25305556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FLAG ISLAND",
+      "lat": 29.62555556,
+      "lon": -85.13305556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PERDIDO BAY MIL RESERV",
+      "lat": 30.28305556,
+      "lon": -87.50777778,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CARRABELLE GAP FIL AX",
+      "lat": 29.86305556,
+      "lon": -84.63611111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CARR MIS TRAC AX",
+      "lat": 29.83638889,
+      "lon": -84.65805556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CARRABELLA RADIO AX D-3C",
+      "lat": 29.905,
+      "lon": -84.55,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "EGLIN FIELD MX-544",
+      "lat": 30.4,
+      "lon": -86.46666667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "GALLIVIER MISSILE TRACKING ANNEX",
+      "lat": 30.71722222,
+      "lon": -86.70388889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MALONE AUX FIELD 2",
+      "lat": 30.99416667,
+      "lon": -85.16638889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "USO 8-162 PANAMA CITY",
+      "lat": 30.16666667,
+      "lon": -85.66666667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FT PIERCE NAVAL AMPH BASE",
+      "lat": 27.46583333,
+      "lon": -80.29944444,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "TYNDALL AFB",
+      "lat": 30.05694444,
+      "lon": -85.555,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "AF PLANT NO 74",
+      "lat": 26.915,
+      "lon": -80.38111111,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "MEXICO BEACON TEST SITE",
+      "lat": 29.93583333,
+      "lon": -85.39138889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "NEISTER MISSILE TRACKING AX",
+      "lat": 30.84,
+      "lon": -86.78861111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "SPURLING MISSILE TRACKING AX",
+      "lat": 30.74111111,
+      "lon": -86.4325,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "PORT CANAVERAL RANGE VES SUP A",
+      "lat": 28.40805556,
+      "lon": -80.59694444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "BROOKSVILLE TURRET GUNNERY RANGE",
+      "lat": 28.54388889,
+      "lon": -82.5175,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "DELAND NAVAL TRAINING CENTER",
+      "lat": 29.07083333,
+      "lon": -81.28972222,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "Valkaria Outlying Field",
+      "lat": 27.96111111,
+      "lon": -80.55805556,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "SITE 7 OLF",
+      "lat": 30.49055556,
+      "lon": -87.2925,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "KINGS OLF",
+      "lat": 30.58527778,
+      "lon": -87.3375,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ELLYSON (SITE 5) OLF",
+      "lat": 30.5527,
+      "lon": -87.270401,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "SITE 4-A OLF",
+      "lat": 30.51611111,
+      "lon": -87.23888889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "TOMOKA OLF",
+      "lat": 29.30222222,
+      "lon": -81.11083333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "OSCEOLA OLF",
+      "lat": 28.78527778,
+      "lon": -81.08638889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ROSELAND OLF",
+      "lat": 27.815,
+      "lon": -80.49388889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "LAKE BUTLER OLF",
+      "lat": 29.98805556,
+      "lon": -82.36361111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "SPENCER BOMB TARGET SITE",
+      "lat": 30.15536862,
+      "lon": -81.82496748,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "PACE OLF",
+      "lat": 30.69916667,
+      "lon": -87.18833333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "LYONS OLF",
+      "lat": 30.65361111,
+      "lon": -87.34083333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FORMAN OLF",
+      "lat": 26.08111111,
+      "lon": -80.23805556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "SWITZERLAND BOMB TARGET",
+      "lat": 30.06194444,
+      "lon": -81.65,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "HELM OLF",
+      "lat": 30.51805556,
+      "lon": -87.39388889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CECIL FIELD NAVAL WEAPON AUX",
+      "lat": 30.30583333,
+      "lon": -81.9,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "BRANAN OLF",
+      "lat": 30.17888889,
+      "lon": -81.82194444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "NAVY MINE DEF LAB",
+      "lat": 30.18222222,
+      "lon": -85.75555556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "TAMPA NAVAL RESERVE TRAINING",
+      "lat": 27.94222222,
+      "lon": -82.43694444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "NAVAL INDUST RES SHIPYARD",
+      "lat": 27.94388889,
+      "lon": -82.44,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "NAVAL AIR STA MAINSIDE CT",
+      "lat": 30.39888889,
+      "lon": -87.27611111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "BRADENTON NAVAL RESERVE FAC",
+      "lat": 27.44388889,
+      "lon": -82.55527778,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "LAKE CITY NAAS",
+      "lat": 30.17888889,
+      "lon": -82.57916667,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "WASHINGTON COURT HOUSING",
+      "lat": 30.42555556,
+      "lon": -87.23916667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "DUVAL NAVAL INDUST RES SHIPYARD",
+      "lat": 30.32305556,
+      "lon": -81.64888889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PAXON FIELD",
+      "lat": 30.34611111,
+      "lon": -81.72611111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "BUNNELL AUX FGHT FIELD",
+      "lat": 29.46444444,
+      "lon": -81.20777778,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "VERO BEACH NAVAL AIR STATION",
+      "lat": 27.655,
+      "lon": -80.415,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "CALLAHAN FIELD",
+      "lat": 30.59916667,
+      "lon": -81.82805556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "KEY WEST NAVAL COMMISSARY",
+      "lat": 24.55,
+      "lon": -81.7975,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "GULF BEACH GUNNERY RANGE",
+      "lat": 30.30194444,
+      "lon": -87.43805556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CHAFFEE BOMB TARGET",
+      "lat": 30.282499,
+      "lon": -81.85767646,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "KEY WEST NAVAL AIR STATION",
+      "lat": 24.57388889,
+      "lon": -81.68888889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "BAYOU CHICO WELL SITE",
+      "lat": 30.40277778,
+      "lon": -87.24638889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "TAVERNIER PUMPING STATION",
+      "lat": 25.00638889,
+      "lon": -80.52083333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "LOW FREQUENCY RADIO RANGE",
+      "lat": 30.43694444,
+      "lon": -87.17833333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MIAMI NAVAL RESERVE FAC",
+      "lat": 25.78,
+      "lon": -80.21388889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "NAVAL AIR STATION SANFORD",
+      "lat": 28.77833333,
+      "lon": -81.24138889,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "CORRY ST USN TECH TRAINING",
+      "lat": 30.39547,
+      "lon": -87.300103,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "NAS JACKSONVILLE DISPOSED OUTPARCELS",
+      "lat": 30.22611111,
+      "lon": -81.69694444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "HARRY S TRUMAN ANX",
+      "lat": 24.55611111,
+      "lon": -81.80694444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "BLACK CREEK BOMB TARGET",
+      "lat": 30.09539818,
+      "lon": -81.96579696,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "KEYSTONE BOMB TARGET",
+      "lat": 29.79805556,
+      "lon": -81.98888889,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "BELL TARGET",
+      "lat": 30.15777778,
+      "lon": -81.89888889,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "CUMMER FIELD TARGET",
+      "lat": 30.2225,
+      "lon": -82.14722222,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "BAKER TARGET",
+      "lat": 30.24527778,
+      "lon": -82.06194444,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "MANNING TARGET",
+      "lat": 30.19805556,
+      "lon": -82.1925,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "BEACH GUNNERY RANGE",
+      "lat": 26.20611111,
+      "lon": -80.09333333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "26-MILE BEND BOMB TARGET",
+      "lat": 26.23777778,
+      "lon": -80.41833333,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "STIRLING BOMB TARGET",
+      "lat": 26.07361111,
+      "lon": -80.34611111,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "DAVIE FIELD TARGET",
+      "lat": 26.04194444,
+      "lon": -80.2275,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "BELMORE FIELD",
+      "lat": 29.91861111,
+      "lon": -81.88972222,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CLAY BOMB TARGET",
+      "lat": 29.82888889,
+      "lon": -81.85583333,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "LAKE DISSTON TARGET",
+      "lat": 29.27333333,
+      "lon": -81.32138889,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "VERO BEACH TARGET 1",
+      "lat": 27.65111111,
+      "lon": -80.77388889,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "FULLERVILLE TARGET",
+      "lat": 28.98944444,
+      "lon": -81.3925,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "HOLOPAW BOMB TARGET",
+      "lat": 28.21138889,
+      "lon": -81.04,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "BOSTWICK BOMB TARGET",
+      "lat": 29.78638889,
+      "lon": -81.68583333,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "JONES CONSTRUCTION CO",
+      "lat": 30.17833333,
+      "lon": -85.72583333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "TAMPA NAVAL INDUST RES SHIPYARD",
+      "lat": 27.94388889,
+      "lon": -82.44,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "TRUMBO POINT NAS ANNEX",
+      "lat": 24.55722222,
+      "lon": -81.79388889,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "LODWICK FIELD",
+      "lat": 28.0781,
+      "lon": -81.949799,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "NEW SMYRNA BEACH MUN AIRPORT",
+      "lat": 29.05444444,
+      "lon": -80.94861111,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "FUEL ISLAND",
+      "lat": 24.56111111,
+      "lon": -81.81388889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CHASSAHOWITZKA",
+      "lat": 28.61916667,
+      "lon": -82.58333333,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "ELLYSON FIELD",
+      "lat": 30.52472222,
+      "lon": -87.19277778,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "PENSACOLA MUN. AIRPORT",
+      "lat": 30.47222222,
+      "lon": -87.18861111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "BAGDAD OLF",
+      "lat": 30.58416667,
+      "lon": -87.07833333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "OLF NO. 35013",
+      "lat": 30.53805556,
+      "lon": -87.30694444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "BITHLO BAL RELEASE ANX",
+      "lat": 28.55194444,
+      "lon": -81.09944444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "BOLLES FERRY AND PARK",
+      "lat": 30.24222222,
+      "lon": -81.63,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "BRANDON FOOD INSPECTION ANNX",
+      "lat": 27.93805556,
+      "lon": -82.30055556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "BUNNELL GAP FILLER",
+      "lat": 29.35361111,
+      "lon": -81.31222222,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CANOVA BEACH RADAR STATION",
+      "lat": 28.12722222,
+      "lon": -80.58277778,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CHRISTMAS RADIO RELAY AX",
+      "lat": 28.4625,
+      "lon": -80.9925,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CRESCENT CITY BOAT FAC",
+      "lat": 29.42944444,
+      "lon": -81.50694444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FLAGLER BEACH AIRPORT",
+      "lat": 29.47611111,
+      "lon": -81.13222222,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FLOATING DOCK CONSTRUCTION YARD",
+      "lat": 30.37888889,
+      "lon": -81.63388889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FT LAUDERDALE BOAT OPER STA",
+      "lat": 26.09388889,
+      "lon": -80.12111111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FT LONESOME RADIO RELAY AX 10",
+      "lat": 27.75416667,
+      "lon": -81.97666667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "GAINESVILLE AF ROTC HOUSING",
+      "lat": 29.66527778,
+      "lon": -82.31861111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "GUN RANGE SUNNY ISLES",
+      "lat": 25.94638889,
+      "lon": -80.11972222,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "HOMESTEAD MARKER ANNEX",
+      "lat": 25.41194444,
+      "lon": -80.47388889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "HOMESTEAD TVOR ANNEX",
+      "lat": 25.39333333,
+      "lon": -80.47638889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "INVERNESS GAP FILLER",
+      "lat": 28.69888889,
+      "lon": -82.40055556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "JACKSONVILLE BEACH SHORE PATROL",
+      "lat": 30.28694444,
+      "lon": -81.39194444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "JACKSONVILLE BUS STATION",
+      "lat": 30.32944444,
+      "lon": -81.66388889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "JACKSONVILLE COLORED SHORE PATROL",
+      "lat": 30.3325,
+      "lon": -81.66527778,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "JACKSONVILLE PROPHYLACTIC STATION",
+      "lat": 30.32861111,
+      "lon": -81.66305556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "JACKSONVILLE SHORE PATROL",
+      "lat": 30.33194444,
+      "lon": -81.65194444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "JUPITER GAP FILLER",
+      "lat": 26.93388889,
+      "lon": -80.07,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "KEY WEST FHG ANNEX",
+      "lat": 24.62722222,
+      "lon": -81.595,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "LAKE BUTLER RADIO BEACON",
+      "lat": 30.03805556,
+      "lon": -82.36111111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "LANTANA MISSILE GUIDANCE ANX",
+      "lat": 26.58111111,
+      "lon": -80.055,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "LONG KEY GAP FILLER",
+      "lat": 24.821899,
+      "lon": -80.819702,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "MACDILL ADM ANNEX",
+      "lat": 27.80055556,
+      "lon": -82.60972222,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MACDILL COLD STORAGE ANNEX",
+      "lat": 27.94861111,
+      "lon": -82.44388889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MARINE AMPHIB STATION",
+      "lat": 28.045,
+      "lon": -82.78472222,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MELBOURNE BEACH RESEARCH ANNEX",
+      "lat": 27.90222222,
+      "lon": -80.47361111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "EGLIN AFB (FEE)",
+      "lat": 30.46194444,
+      "lon": -86.58555556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "EGLIN AFB (PD)",
+      "lat": 30.44944444,
+      "lon": -86.57666667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "EGLIN AFB (LEASED)",
+      "lat": 30.41222222,
+      "lon": -86.73666667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PANAMA CITY HARBOR DEF",
+      "lat": 30.130528,
+      "lon": -85.735203,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "661ST RADAR SITE",
+      "lat": 28.34777778,
+      "lon": -82.28666667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "OKESIANIA ATG GUN RANGE",
+      "lat": 26.89222222,
+      "lon": -80.51611111,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "GLADE CREST AIR-TO-GROUND BOMB RANGE",
+      "lat": 26.80111111,
+      "lon": -80.41194444,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "ALLIGATOR BOMB TARGET",
+      "lat": 30.58111111,
+      "lon": -81.48638889,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "LAKE GEORGE RADIO BEACON",
+      "lat": 29.27111111,
+      "lon": -81.54388889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "LEISURE FHG ANNEX",
+      "lat": 25.49861111,
+      "lon": -80.42305556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MOSQUITO LAGOON TARGET",
+      "lat": 28.84333333,
+      "lon": -80.76861111,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "MELBOURNE BOMB & GUN RANGE",
+      "lat": 28.00388889,
+      "lon": -80.77861111,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "MERRITT ISLAND STRG AX",
+      "lat": 28.36166667,
+      "lon": -80.69972222,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MIAMI ADMIN. ANNEX",
+      "lat": 25.80805556,
+      "lon": -80.27,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MIAMI BEACH TRCKG AX",
+      "lat": 25.76611111,
+      "lon": -80.13305556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MIAMI FOOD INSPECTION AX",
+      "lat": 25.77194444,
+      "lon": -80.19305556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MIAMI RECRUITING FHG SITE",
+      "lat": 25.93611111,
+      "lon": -80.21194444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "DINNER KEY NAVAL AIR FAC",
+      "lat": 25.72888889,
+      "lon": -80.235,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "NAVAL RESERVE ARMORY JACKSONVILLE",
+      "lat": 30.31916667,
+      "lon": -81.65527778,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "NEW SMYRNA BOAT FAC",
+      "lat": 29.02833333,
+      "lon": -80.92138889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "NORTH INDIALANTIC AX",
+      "lat": 28.12027778,
+      "lon": -80.57611111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PENNEY OUTLYING FIELD",
+      "lat": 29.97833333,
+      "lon": -81.855,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "RIVERSIDE TRAIN AREA",
+      "lat": 25.99666667,
+      "lon": -80.3,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "RUSSELL RADIO BEACON",
+      "lat": 30.04083333,
+      "lon": -81.74055556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "SHORE PATROL BLDG JACKSONVILLE",
+      "lat": 30.335,
+      "lon": -81.65388889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "STRAFING RANGE",
+      "lat": 28.62166667,
+      "lon": -81.03333333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "VERO BEACH TARGET NO 2",
+      "lat": 27.45305556,
+      "lon": -80.50138889,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "VERO BEACH UNDERWATER CS",
+      "lat": 27.58666667,
+      "lon": -80.335,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "WADE OLF",
+      "lat": 30.35805556,
+      "lon": -81.76805556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "W VERO BEACH CAMERA AX",
+      "lat": 27.63888889,
+      "lon": -80.48,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "BAUER FIELD",
+      "lat": 30.34111111,
+      "lon": -87.40472222,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FIELD 9-A",
+      "lat": 30.56722222,
+      "lon": -87.31416667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "GONZALES FIELD",
+      "lat": 30.59888889,
+      "lon": -87.26388889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "APOPKA COAST CAMP",
+      "lat": 28.6775,
+      "lon": -81.5075,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ARMY FOURTH CORPS HQ",
+      "lat": 30.33388889,
+      "lon": -81.65305556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "BLAKE KEY BOMB TARGET",
+      "lat": 24.67694444,
+      "lon": -81.62416667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "BRADENTON AIRCRAFT CENTER",
+      "lat": 27.48611111,
+      "lon": -82.56694444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CEDAR KEYS BOAT STATION",
+      "lat": 29.13611111,
+      "lon": -83.0325,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CONFEDERATE PARK HOUSING",
+      "lat": 30.33305556,
+      "lon": -81.65194444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CROSS CITY TARGET RGE",
+      "lat": 29.46666667,
+      "lon": -83.29166667,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "DADE BOMBING RANGE",
+      "lat": 25.92416667,
+      "lon": -80.55,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "ESTRO ISLAND DOCKS",
+      "lat": 26.45222222,
+      "lon": -81.95055556,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "EUSTIS COAST TRP CAMP",
+      "lat": 28.85916667,
+      "lon": -81.68416667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FLORIDA FIELD STATION",
+      "lat": 28.49805556,
+      "lon": -81.77305556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FLORIDA MEDICAL CENTER",
+      "lat": 27.09777778,
+      "lon": -82.45083333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "INDIAN RIVER AWS STATION",
+      "lat": 27.78444444,
+      "lon": -80.49166667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "LAKE PALESTINE TARGET",
+      "lat": 30.11666667,
+      "lon": -82.40861111,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "LAKE WILMINGTON TARGET",
+      "lat": 27.7275,
+      "lon": -80.75694444,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "LAKE WEIR BOMB TARGET",
+      "lat": 29.01805556,
+      "lon": -81.9375,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "LAKE WOODRUFF TARGET",
+      "lat": 29.09583333,
+      "lon": -81.41666667,
+      "status": "Properties with projects"
+    },
+    {
+      "name": "OTTER KEY BOMB TARGET",
+      "lat": 25.14194444,
+      "lon": -80.78694444,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "RHOMBIC ANTENNA SITE",
+      "lat": 28.52194444,
+      "lon": -80.58194444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "SANDY KEY BOMB TARGET",
+      "lat": 25.03444444,
+      "lon": -81.01583333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MORENO PT RESERVATION",
+      "lat": 30.3875,
+      "lon": -86.45833333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "AERIAL GUN RANGE",
+      "lat": 26.61944444,
+      "lon": -80.36833333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "AIR FORCE SUPPORT SITE",
+      "lat": 26.8617282,
+      "lon": -80.6348832,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FORMER MILITARY SITE LAKE COUNTY",
+      "lat": 28.93361111,
+      "lon": -81.64194444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ORANGE COUNTY UNKNOWN SITE",
+      "lat": 28.5375,
+      "lon": -81.29833333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "POLK COUNTY UNKNOWN SITE",
+      "lat": 28.18583333,
+      "lon": -81.82361111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "SARASOTA CO UNKNOWN MIL SITE",
+      "lat": 27.4,
+      "lon": -82.552,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "KONGO BOMB TARGET",
+      "lat": 28.99277,
+      "lon": -81.39219,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ARMY CAMP",
+      "lat": 28.56666667,
+      "lon": -81.73333333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "TORPEDO FACTORY",
+      "lat": 26.26666667,
+      "lon": -80.26666667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "TORPEDO RANGE",
+      "lat": 26.75730319,
+      "lon": -80.76838499,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ARMY DUMP SITE",
+      "lat": 27.1095103,
+      "lon": -81.7827695,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ARMY AIR-TO-GROUND GUNNERY STRAFING TARGET",
+      "lat": 27.11416667,
+      "lon": -81.79083333,
+      "status": "Properties with all projects at site closeout"
+    },
+    {
+      "name": "ARMY SMALL ARMS RANGE",
+      "lat": 27.11527778,
+      "lon": -81.79833333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "ARMY DUMP SITE",
+      "lat": 27.12944444,
+      "lon": -81.7875,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "TAMPA BOQ",
+      "lat": 27.96666667,
+      "lon": -82.46666667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "DREDGERS KEY",
+      "lat": 24.57916667,
+      "lon": -81.77361111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "FORT VILLAGE HOUSING",
+      "lat": 24.56666667,
+      "lon": -81.76666667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "REST BEACH HOUSING",
+      "lat": 24.55,
+      "lon": -81.8,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "OKEECHOBEE TARGETS",
+      "lat": 26.94805556,
+      "lon": -80.83138889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CAPE CANAVERAL BOMB TARGET",
+      "lat": 28.49166667,
+      "lon": -80.56527778,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MERRITT ISLAND STRAFING TARGET",
+      "lat": 28.67666667,
+      "lon": -80.75666667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "HARRISON ISLAND BOMB TARGET",
+      "lat": 28.555,
+      "lon": -80.58527778,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CRESCENT LAKE TARGETS",
+      "lat": 29.45,
+      "lon": -81.48,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "TRUK TARGET",
+      "lat": 29.12777778,
+      "lon": -81.53888889,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PAISLEY (SHANGHAI) TARGET",
+      "lat": 29.03333333,
+      "lon": -81.5,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "LAKE DORR TARGETS",
+      "lat": 28.99722222,
+      "lon": -81.62083333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "TURRET GUNNERY RANGE, BREVARD COUNTY",
+      "lat": 28.16888889,
+      "lon": -80.58777778,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "MERRITT ISLAND HORIZONTAL BOMBING TARGET",
+      "lat": 28.61833333,
+      "lon": -80.72166667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "LITTLE GASPARILLA ISLAND RANGE C",
+      "lat": 26.82916667,
+      "lon": -82.28944444,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PLACIDA PROJECT",
+      "lat": 26.84694444,
+      "lon": -82.25361111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "HORSESHOE POINT RADAR BOMBING TARGET #1",
+      "lat": 29.44166667,
+      "lon": -83.41666667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PEPPERFISH KEY RADAR BOMBING TARGET #1",
+      "lat": 29.466667,
+      "lon": -83.416667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "TERRA CEIA SKIP BOMBING TARGET",
+      "lat": 27.65694444,
+      "lon": -82.56111111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "KEYS TARGET A-STRAFING AND GLIDE BOMBING",
+      "lat": 24.54582999,
+      "lon": -82.04582999,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "KEYS TARGET B-STRAFING",
+      "lat": 24.54444,
+      "lon": -81.99721999,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "KEYS TARGET C-LIVE BOMBING",
+      "lat": 24.52499999,
+      "lon": -81.96388999,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "KEYS TARGET E-STRAFING",
+      "lat": 24.58611111,
+      "lon": -81.95833333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "KEYS TARGET F-STRAFING",
+      "lat": 24.60277778,
+      "lon": -81.93333333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CUDJOE KEY ROCKET FIRING RANGE",
+      "lat": 24.64583333,
+      "lon": -81.47777778,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CHANNEL KEY ISLAND BOMBING TARGET",
+      "lat": 24.79305556,
+      "lon": -80.91666667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "WHITEWATER BAY TARGET AREA M-7",
+      "lat": 25.3,
+      "lon": -81.00416667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "KEY WEST MARINE CORPS RIFLE RANGE",
+      "lat": 24.57666667,
+      "lon": -81.73833333,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "Poorman Gunnery Range \u2013 Drew and MacDill Fields",
+      "lat": 27.9,
+      "lon": -82.60555556,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "AERIAL TARGET, ST. LUCIE & MARTIN COUNTIES",
+      "lat": 27.26305556,
+      "lon": -80.20111111,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PENSACOLA SECTION ONE FIELD",
+      "lat": 30.54332222,
+      "lon": -87.40152777,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PENSACOLA DIVE BOMBING TARGET NO. 1",
+      "lat": 30.28,
+      "lon": -87.53667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PENSACOLA DIVE BOMBING TARGET NO. 2",
+      "lat": 30.29666119,
+      "lon": -87.45832969,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PENSACOLA DIVE BOMBING TARGET NO. 5",
+      "lat": 30.35922,
+      "lon": -87.045969,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PENSACOLA DIVE BOMBING TARGET NO. 6",
+      "lat": 30.366667,
+      "lon": -86.975,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "CANAL BOMB TARGET",
+      "lat": 29.55166667,
+      "lon": -81.71666667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "PINECASTLE DUMMY AIRDROME",
+      "lat": 28.44166667,
+      "lon": -81.27916667,
+      "status": "Properties without projects"
+    },
+    {
+      "name": "JUNGLE WARFARE TEST TARGET",
+      "lat": 29.27916667,
+      "lon": -83.0125,
+      "status": "Properties with all projects at site closeout"
+    }
+  ]
+}

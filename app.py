@@ -1,12 +1,29 @@
 """
-Phase I ESA Database Proxy — v9.22
+Phase I ESA Database Proxy — v9.23
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import requests, math, time
+import requests, math, time, json, os
+
+# ── FUDS static data (FY2024) ─────────────────────────────────────────────────
+# USACE ArcGIS servers block automated requests from cloud hosting IPs.
+# Data loaded from local file downloaded from USACE open data portal.
+# ⚠️  UPDATE REMINDER: Download new data each October when USACE releases
+#     the next fiscal year. Source:
+#     https://geospatial-usace.opendata.arcgis.com/datasets/3f8354667d5b4b1b8ad7a6e00c3cf3b1_1
+_FUDS_FILE = os.path.join(os.path.dirname(__file__), "fuds_florida.json")
+try:
+    with open(_FUDS_FILE) as _f:
+        _FUDS_DATA = json.load(_f)
+    FUDS_SITES = _FUDS_DATA["sites"]
+    FUDS_FY    = _FUDS_DATA["fiscal_year"]
+except Exception as _e:
+    FUDS_SITES = []
+    FUDS_FY    = "unknown"
+    print(f"WARNING: Could not load FUDS data: {_e}")
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app)
@@ -279,54 +296,37 @@ def echo_rcra_all(lat, lon):
 
 # ── USACE FUDS ────────────────────────────────────────────────────────────────
 def fuds(lat, lon, radius_miles):
-    """Query USACE FUDS using WHERE clause on lat/lon attributes — deduplicate by site name."""
-    url = "https://services7.arcgis.com/n1YM8pTrFmm7L4hs/arcgis/rest/services/FUDS_Projects/FeatureServer/0/query"
-    mn_lat, mx_lat, mn_lon, mx_lon = bbox(lat, lon, radius_miles)
-    where = f"LATITUDE>={mn_lat} AND LATITUDE<={mx_lat} AND LONGITUDE>={mn_lon} AND LONGITUDE<={mx_lon}"
-    try:
-        r = requests.get(url, params={
-            "where":          where,
-            "outFields":      "PROJECT_NAME,PROJECT_STATUS,SITE_NAME,LATITUDE,LONGITUDE",
-            "returnGeometry": "false",
-            "f":              "json",
-        }, timeout=20)
-        r.raise_for_status()
-        data = r.json()
-    except Exception as e:
-        return {"count": 0, "sites": [], "error": str(e)}
-    if "error" in data:
-        return {"count": 0, "sites": [], "error": data["error"]}
-    raw_sites = []
-    for feat in data.get("features", []):
-        attrs  = feat.get("attributes", {})
-        status = str(attrs.get("PROJECT_STATUS","") or "")
-        flat   = float(attrs.get("LATITUDE", 0) or 0)
-        flon   = float(attrs.get("LONGITUDE", 0) or 0)
+    """
+    Query USACE FUDS from static FY2024 Florida data.
+    USACE ArcGIS servers block cloud hosting IPs — static file is more reliable.
+    Update fuds_florida.json each October when USACE releases new FY data.
+    Source: https://geospatial-usace.opendata.arcgis.com/datasets/3f8354667d5b4b1b8ad7a6e00c3cf3b1_1
+    """
+    if not FUDS_SITES:
+        return {"count": 0, "sites": [], "error": "FUDS data file not loaded"}
+    sites = []
+    for record in FUDS_SITES:
+        flat = record.get("lat", 0)
+        flon = record.get("lon", 0)
         if not flat or not flon:
             continue
         dist = haversine(lat, lon, flat, flon)
         if dist > radius_miles:
             continue
-        site_name = str(attrs.get("SITE_NAME") or attrs.get("PROJECT_NAME") or "Unknown FUDS")
-        proj_name = str(attrs.get("PROJECT_NAME") or site_name)
-        nc = status.upper() not in {"CLOSED","COMPLETE","NO FURTHER ACTION","NFA","INELIGIBLE"}
-        raw_sites.append({"site_name": site_name, "name": proj_name,
-                          "distance": round(dist,2), "status": status, "nc": nc})
-    # Deduplicate by site name — keep closest, upgrade to NC if any record is NC
-    site_groups = {}
-    for s in raw_sites:
-        key = s["site_name"]
-        if key not in site_groups:
-            site_groups[key] = s
-        else:
-            if s["distance"] < site_groups[key]["distance"]:
-                site_groups[key]["distance"] = s["distance"]
-            if s["nc"]:
-                site_groups[key]["nc"] = True
-    sites = sorted(site_groups.values(), key=lambda s: s["distance"])
-    for s in sites:
-        s.pop("site_name", None)
-    return {"count": len(sites), "sites": sites}
+        status = record.get("status", "")
+        # NC if property has active projects (not all closed/no projects)
+        nc = status not in {
+            "Properties with all projects at site closeout",
+            "Properties without projects"
+        }
+        sites.append({
+            "name":     record["name"],
+            "distance": round(dist, 2),
+            "status":   status,
+            "nc":       nc
+        })
+    sites.sort(key=lambda s: s["distance"])
+    return {"count": len(sites), "sites": sites, "data_source": f"USACE FUDS {FUDS_FY} (static)"}
 
 # ── FRS NPL ───────────────────────────────────────────────────────────────────
 def frs_npl(lat, lon, radius_miles, status_filter=None):
@@ -617,7 +617,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.22", "name": "Phase I ESA Proxy v9.22"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.23", "name": "Phase I ESA Proxy v9.23"})
 
 @app.route("/browndebug", methods=["GET"])
 def browndebug():
