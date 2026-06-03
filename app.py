@@ -155,23 +155,41 @@ def echo_rcra(lat, lon, radius_miles, handler_types):
 # ── EPA FRS NPL ───────────────────────────────────────────────────────────────
 
 def frs_npl(lat, lon, radius_miles, status_filter=None):
-    data = arcgis_query(
-        "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/21/query",
-        lat, lon, radius_miles,
-        out_fields="PRIMARY_NAME,NPL_STATUS_NAME,LATITUDE83,LONGITUDE83",
-        use_units=False)
+    deg_lat = radius_miles / 69.0
+    deg_lon = radius_miles / (69.0 * math.cos(math.radians(lat)))
+    where = (f"LATITUDE83 >= {lat-deg_lat} AND LATITUDE83 <= {lat+deg_lat} "
+             f"AND LONGITUDE83 >= {lon-deg_lon} AND LONGITUDE83 <= {lon+deg_lon}")
+    params = {
+        "where":          where,
+        "outFields":      "PRIMARY_NAME,NPL_STATUS_NAME,LATITUDE83,LONGITUDE83",
+        "returnGeometry": "false",
+        "f":              "json",
+    }
+    try:
+        r = requests.get(
+            "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/21/query",
+            params=params, timeout=30)
+        r.raise_for_status()
+        data = r.json()
+    except Exception as e:
+        return {"count": 0, "sites": [], "error": str(e)}
+    if "error" in data:
+        return {"count": 0, "sites": [], "error": data["error"]}
     sites = []
     for feat in data.get("features", []):
         attrs  = feat.get("attributes", {})
-        geom   = feat.get("geometry", {})
-        status = attrs.get("NPL_STATUS_NAME", "") or ""
+        status = attrs.get("NPL_STATUS_NAME","") or ""
         if status_filter and status not in status_filter:
             continue
-        flat = float(attrs.get("LATITUDE83",  0) or geom.get("y", 0))
-        flon = float(attrs.get("LONGITUDE83", 0) or geom.get("x", 0))
-        dist = round(haversine(lat, lon, flat, flon), 2) if flat else 999.0
-        nc   = status in ["Currently on the Final NPL","Proposed for NPL"]
-        sites.append({"name":attrs.get("PRIMARY_NAME","Unknown"),"distance":dist,"status":status,"nc":nc})
+        flat = float(attrs.get("LATITUDE83", 0) or 0)
+        flon = float(attrs.get("LONGITUDE83", 0) or 0)
+        if not flat or not flon:
+            continue
+        dist = haversine(lat, lon, flat, flon)
+        if dist > radius_miles:
+            continue
+        nc = status in ["Currently on the Final NPL","Proposed for NPL"]
+        sites.append({"name":attrs.get("PRIMARY_NAME","Unknown"),"distance":round(dist,2),"status":status,"nc":nc})
     sites.sort(key=lambda s: s["distance"])
     return {"count": len(sites), "sites": sites}
 
@@ -200,35 +218,53 @@ def fuds(lat, lon, radius_miles):
 
 def cercla(lat, lon, radius_miles):
     """
-    Query CERCLA non-NPL sites via FRS SEMS layer (layer 21), excluding
-    active/proposed NPL sites which are already captured in the NPL query.
-    Catches NFRAP, archived, removal, and other CERCLA non-NPL sites.
+    Query CERCLA/SEMS sites via FRS layer 21 using a bounding box WHERE clause.
+    Avoids spatial distance query which fails on this layer.
+    Filters by lat/lon bounds, then applies haversine for exact radius.
     """
-    data = arcgis_query(
-        "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/21/query",
-        lat, lon, radius_miles,
-        out_fields="PRIMARY_NAME,NPL_STATUS_NAME,LATITUDE83,LONGITUDE83",
-        use_units=False)
+    deg_lat = radius_miles / 69.0
+    deg_lon = radius_miles / (69.0 * math.cos(math.radians(lat)))
+    min_lat = lat - deg_lat
+    max_lat = lat + deg_lat
+    min_lon = lon - deg_lon
+    max_lon = lon + deg_lon
+    where = (f"LATITUDE83 >= {min_lat} AND LATITUDE83 <= {max_lat} "
+             f"AND LONGITUDE83 >= {min_lon} AND LONGITUDE83 <= {max_lon}")
+    params = {
+        "where":          where,
+        "outFields":      "PRIMARY_NAME,NPL_STATUS_NAME,LATITUDE83,LONGITUDE83",
+        "returnGeometry": "false",
+        "f":              "json",
+    }
+    try:
+        r = requests.get(
+            "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/21/query",
+            params=params, timeout=30)
+        r.raise_for_status()
+        data = r.json()
+    except Exception as e:
+        return {"count": 0, "sites": [], "error": str(e)}
     if "error" in data:
         return {"count": 0, "sites": [], "error": data["error"]}
     sites = []
     for feat in data.get("features", []):
         attrs  = feat.get("attributes", {})
-        geom   = feat.get("geometry", {})
         status = attrs.get("NPL_STATUS_NAME","") or ""
-        # Exclude active/proposed NPL — already captured in NPL query
         if status in ["Currently on the Final NPL","Proposed for NPL"]:
             continue
-        flat = float(attrs.get("LATITUDE83", 0) or geom.get("y", 0))
-        flon = float(attrs.get("LONGITUDE83", 0) or geom.get("x", 0))
-        dist = round(haversine(lat, lon, flat, flon), 2) if flat else 999.0
-        # NC if not deleted/delisted (those are informational only)
+        flat = float(attrs.get("LATITUDE83", 0) or 0)
+        flon = float(attrs.get("LONGITUDE83", 0) or 0)
+        if not flat or not flon:
+            continue
+        dist = haversine(lat, lon, flat, flon)
+        if dist > radius_miles:
+            continue
         nc = status.upper() not in {"DELETED FROM THE FINAL NPL"}
         sites.append({
-            "name": attrs.get("PRIMARY_NAME","Unknown"),
-            "distance": dist,
-            "status": status,
-            "nc": nc
+            "name":     attrs.get("PRIMARY_NAME","Unknown"),
+            "distance": round(dist, 2),
+            "status":   status,
+            "nc":       nc
         })
     sites.sort(key=lambda s: s["distance"])
     return {"count": len(sites), "sites": sites}
@@ -328,7 +364,17 @@ def query():
         fdep_data  = arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=BROWN_WHERE, out_fields=DEP_FIELDS)
         fdep_sites = parse_features(fdep_data, lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)
         # EPA CIMC brownfields from ACRES (FRS_INTERESTS layer 0)
-        epa_data   = arcgis_query(EPA_BROWNFIELDS, lat, lon, 0.5, out_fields="PRIMARY_NAME,LATITUDE83,LONGITUDE83,SITE_STATUS", use_units=False)
+        deg_lat_b = 0.5 / 69.0
+    deg_lon_b = 0.5 / (69.0 * math.cos(math.radians(lat)))
+    brown_where = (f"LATITUDE83 >= {lat-deg_lat_b} AND LATITUDE83 <= {lat+deg_lat_b} "
+                   f"AND LONGITUDE83 >= {lon-deg_lon_b} AND LONGITUDE83 <= {lon+deg_lon_b}")
+    try:
+        epa_r = requests.get(EPA_BROWNFIELDS,
+            params={"where": brown_where, "outFields": "PRIMARY_NAME,LATITUDE83,LONGITUDE83,SITE_STATUS",
+                    "returnGeometry": "false", "f": "json"}, timeout=30)
+        epa_data = epa_r.json()
+    except Exception:
+        epa_data = {"features": []}
         epa_sites  = []
         for feat in epa_data.get("features", []):
             attrs = feat.get("attributes", {})
