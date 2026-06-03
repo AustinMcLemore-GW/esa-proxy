@@ -176,42 +176,36 @@ def fuds(lat, lon, radius_miles):
 # ── CERCLA ────────────────────────────────────────────────────────────────────
 
 def cercla(lat, lon, radius_miles):
-    # HIFLD CERCLA non-NPL layer — CERCLIS sites not on NPL (active only)
-    # Primary source: NASA HIFLD open data CERCLA Information System Facilities
+    """
+    Query CERCLA non-NPL sites via FRS SEMS layer (layer 21), excluding
+    active/proposed NPL sites which are already captured in the NPL query.
+    Catches NFRAP, archived, removal, and other CERCLA non-NPL sites.
+    """
     data = arcgis_query(
-        "https://maps.nccs.nasa.gov/mapping/rest/services/hifld_open/chemicals/FeatureServer/0/query",
-        lat, lon, radius_miles,
-        out_fields="REGISTRY_ID,NAME,STATE,LATITUDE,LONGITUDE")
-    if "error" not in data and data.get("features"):
-        sites = []
-        for feat in data.get("features", []):
-            attrs = feat.get("attributes", {})
-            geom  = feat.get("geometry", {})
-            name  = str(attrs.get("NAME") or "Unknown CERCLA Site")
-            flat  = float(attrs.get("LATITUDE", 0) or geom.get("y", 0))
-            flon  = float(attrs.get("LONGITUDE", 0) or geom.get("x", 0))
-            dist  = round(haversine(lat, lon, flat, flon), 2) if flat else 999.0
-            sites.append({"name": name, "distance": dist, "status": "Active CERCLA Non-NPL", "nc": True})
-        sites.sort(key=lambda s: s["distance"])
-        return {"count": len(sites), "sites": sites}
-    # Fallback: FRS SEMS layer without NPL filter (catches NFRAP/archived too)
-    data2 = arcgis_query(
         "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/21/query",
         lat, lon, radius_miles,
         out_fields="PRIMARY_NAME,NPL_STATUS_NAME,LATITUDE83,LONGITUDE83")
+    if "error" in data:
+        return {"count": 0, "sites": [], "error": data["error"]}
     sites = []
-    for feat in data2.get("features", []):
+    for feat in data.get("features", []):
         attrs  = feat.get("attributes", {})
         geom   = feat.get("geometry", {})
         status = attrs.get("NPL_STATUS_NAME","") or ""
-        # Exclude active/proposed NPL — those are already in the NPL query
+        # Exclude active/proposed NPL — already captured in NPL query
         if status in ["Currently on the Final NPL","Proposed for NPL"]:
             continue
         flat = float(attrs.get("LATITUDE83", 0) or geom.get("y", 0))
         flon = float(attrs.get("LONGITUDE83", 0) or geom.get("x", 0))
         dist = round(haversine(lat, lon, flat, flon), 2) if flat else 999.0
-        nc   = status.upper() not in {"DELETED FROM THE FINAL NPL"}
-        sites.append({"name":attrs.get("PRIMARY_NAME","Unknown"),"distance":dist,"status":status,"nc":nc})
+        # NC if not deleted/delisted (those are informational only)
+        nc = status.upper() not in {"DELETED FROM THE FINAL NPL"}
+        sites.append({
+            "name": attrs.get("PRIMARY_NAME","Unknown"),
+            "distance": dist,
+            "status": status,
+            "nc": nc
+        })
     sites.sort(key=lambda s: s["distance"])
     return {"count": len(sites), "sites": sites}
 
@@ -390,7 +384,6 @@ def debug():
         "frs_npl":       lambda: frs_npl(lat, lon, 1.0),
         "fuds":          lambda: fuds(lat, lon, 1.0),
         "cercla":        lambda: cercla(lat, lon, 0.5),
-        "hifld_cercla":  lambda: arcgis_query("https://maps.nccs.nasa.gov/mapping/rest/services/hifld_open/chemicals/FeatureServer/0/query", lat, lon, 0.5, out_fields="REGISTRY_ID,NAME,STATE,LATITUDE,LONGITUDE"),
     }
     if db not in routes:
         return jsonify({"error": f"unknown db '{db}'", "options": list(routes.keys())}), 400
