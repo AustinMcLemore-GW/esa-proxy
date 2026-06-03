@@ -467,28 +467,44 @@ def health():
 
 @app.route("/rawdebug", methods=["GET"])
 def rawdebug():
+    """Tests multiple query approaches against FRS layer 21 to find what works."""
+    results = {}
+    url = "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/21/query"
+
+    # Test 1: absolute minimum query
     try:
-        lat = float(request.args.get("lat", 27.745717))
-        lon = float(request.args.get("lon", -82.68471))
-        radius_miles = float(request.args.get("r", 0.5))
-        params = {
-            "geometry":       f"{lon},{lat}",
-            "geometryType":   "esriGeometryPoint",
-            "spatialRel":     "esriSpatialRelIntersects",
-            "distance":       radius_miles * 1609.34,
-            "units":          "esriSRUnit_Meter",
-            "inSR":           "4269",
-            "outSR":          "4326",
-            "where":          "1=1",
-            "outFields":      "PRIMARY_NAME,NPL_STATUS_NAME,LATITUDE83,LONGITUDE83",
-            "returnGeometry": "false",
-            "f":              "json",
-        }
-        url = "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/21/query"
-        r = requests.get(url, params=params, timeout=30)
-        return jsonify({"status_code": r.status_code, "url_called": r.url, "response": r.json()})
+        r = requests.get(url, params={"where": "1=1", "resultRecordCount": "1", "f": "json"}, timeout=30)
+        results["test1_minimal"] = {"status": r.status_code, "response": r.json()}
     except Exception as e:
-        return jsonify({"error": str(e)})
+        results["test1_minimal"] = {"error": str(e)}
+
+    # Test 2: count only
+    try:
+        r = requests.get(url, params={"where": "1=1", "returnCountOnly": "true", "f": "json"}, timeout=30)
+        results["test2_count"] = {"status": r.status_code, "response": r.json()}
+    except Exception as e:
+        results["test2_count"] = {"error": str(e)}
+
+    # Test 3: state filter
+    try:
+        r = requests.get(url, params={"where": "STATE_CODE='FL'", "returnCountOnly": "true", "f": "json"}, timeout=30)
+        results["test3_state"] = {"status": r.status_code, "response": r.json()}
+    except Exception as e:
+        results["test3_state"] = {"error": str(e)}
+
+    # Test 4: lat/lon where clause
+    try:
+        r = requests.get(url, params={
+            "where": "LATITUDE83 >= 27.7 AND LATITUDE83 <= 27.8 AND LONGITUDE83 >= -82.7 AND LONGITUDE83 <= -82.6",
+            "outFields": "PRIMARY_NAME,NPL_STATUS_NAME",
+            "returnGeometry": "false",
+            "f": "json"
+        }, timeout=30)
+        results["test4_bbox_where"] = {"status": r.status_code, "response": r.json()}
+    except Exception as e:
+        results["test4_bbox_where"] = {"error": str(e)}
+
+    return jsonify(results)
 
 
 if __name__ == "__main__":
