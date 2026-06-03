@@ -676,58 +676,60 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.42", "name": "Phase I ESA Proxy v9.42"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.43", "name": "Phase I ESA Proxy v9.43"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
-    """Test alternative RCRA/NPL endpoints to find ones that work from Render IP."""
+    """Test alternative RCRA/NPL endpoints."""
     lat = float(request.args.get("lat", 27.892213))
     lon = float(request.args.get("lon", -82.715845))
     results = {}
-
-    # Test 1: ECHO get_facilities (different endpoint than rcra_rest_services)
-    try:
-        r = requests.get("https://echodata.epa.gov/echo/echo_rest_services.get_facilities", params={
-            "output": "JSON", "p_lat": lat, "p_lon": lon, "p_radius_mi": 1.0,
-            "p_act": "Y", "p_medium": "RCRA", "qcolumns": "1,2,3,4,5,6"
-        }, timeout=15)
-        results["echo_get_facilities"] = {"status": r.status_code, "sample": str(r.text[:300])}
-    except Exception as e:
-        results["echo_get_facilities"] = {"error": str(e)}
-
-    # Test 2: Envirofacts RCRA_HANDLER by state + bbox
     mn_lat, mx_lat, mn_lon, mx_lon = bbox(lat, lon, 1.0)
-    try:
-        url = (f"https://data.epa.gov/efservice/RCRA_HANDLER"
-               f"/STATE_CODE/FL"
-               f"/LATITUDE82/GREATER_THAN/{mn_lat:.4f}"
-               f"/LATITUDE82/LESS_THAN/{mx_lat:.4f}"
-               f"/rows/0:10/JSON")
-        r = requests.get(url, timeout=15)
-        results["envirofacts_rcra"] = {"status": r.status_code, "sample": str(r.text[:300])}
-    except Exception as e:
-        results["envirofacts_rcra"] = {"error": str(e)}
 
-    # Test 3: FRS spatial for RCRA facilities
+    # Test 1: Envirofacts correct table name rcra_handler (lowercase)
+    try:
+        url = f"https://data.epa.gov/efservice/rcra_handler/state_code/FL/rows/0:5/JSON"
+        r = requests.get(url, timeout=15)
+        results["envirofacts_rcra_handler"] = {"status": r.status_code, "sample": str(r.text[:400])}
+    except Exception as e:
+        results["envirofacts_rcra_handler"] = {"error": str(e)}
+
+    # Test 2: FRS layer 4 info — get field names
+    try:
+        r = requests.get(
+            "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/4",
+            params={"f":"json"}, timeout=15)
+        data = r.json()
+        results["frs_layer4_info"] = {
+            "name": data.get("name"),
+            "fields": [f["name"] for f in data.get("fields",[])[:15]]
+        }
+    except Exception as e:
+        results["frs_layer4_info"] = {"error": str(e)}
+
+    # Test 3: FRS layer 4 sample record
     try:
         data = frs_spatial(
             "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/4/query",
-            lat, lon, 1.0,
-            out_fields="PRIMARY_NAME,ACTIVE_STATUS,LATITUDE83,LONGITUDE83,INTEREST_TYPE")
-        results["frs_rcra_layer4"] = {"features": len(data.get("features",[])), "error": data.get("error")}
+            lat, lon, 1.0, out_fields="*")
+        results["frs_layer4_sample"] = {
+            "features": len(data.get("features",[])),
+            "first": data.get("features",[{}])[0].get("attributes",{}) if data.get("features") else None,
+            "error": data.get("error")
+        }
     except Exception as e:
-        results["frs_rcra_layer4"] = {"error": str(e)}
+        results["frs_layer4_sample"] = {"error": str(e)}
 
-    # Test 4: ECHO RCRA with longer wait
+    # Test 4: FRS layers list to find RCRA layer
     try:
-        time.sleep(5)
-        r = requests.get("https://echodata.epa.gov/echo/rcra_rest_services.get_facility_info", params={
-            "output": "JSON", "p_lat": lat, "p_lon": lon, "p_radius_mi": 1.0,
-            "qcolumns": "1,2,3,4,5,6,38,39,40,41"
-        }, timeout=15)
-        results["echo_rcra_after_delay"] = {"status": r.status_code, "sample": str(r.text[:200])}
+        r = requests.get(
+            "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer",
+            params={"f":"json"}, timeout=15)
+        data = r.json()
+        results["frs_all_layers"] = [{"id": l["id"], "name": l["name"]}
+                                      for l in data.get("layers",[])]
     except Exception as e:
-        results["echo_rcra_after_delay"] = {"error": str(e)}
+        results["frs_all_layers"] = {"error": str(e)}
 
     return jsonify(results)
 
