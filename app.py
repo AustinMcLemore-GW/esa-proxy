@@ -124,6 +124,7 @@ def parse_frs(data, lat, lon, name_field, lat_field, lon_field, radius_miles,
 
 # ── FDEP URLs ─────────────────────────────────────────────────────────────────
 DEP_CLEANUP  = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CLEANUP_SP/MapServer/0/query"
+ERIC_LAYER   = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CLEANUP_SP/MapServer/8/query"
 FL_SUPERFUND = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CLEANUP_SP/MapServer/1/query"
 CHAZ         = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CHAZ/MapServer/5/query"
 STCM_TANKS   = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/DWM_STCM/MapServer/1/query"
@@ -412,6 +413,7 @@ def debug():
         "stcm_tanks":     lambda: fdep_query(STCM_TANKS, lat, lon, 0.05, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"),
         "solid":          lambda: fdep_query(SOLID_WASTE, lat, lon, 0.5, out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"),
         "ic":             lambda: fdep_query(ICR, lat, lon, 0.05, out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE"),
+        "eric":           lambda: fdep_query(ERIC_LAYER, lat, lon, 0.5, out_fields="SITE_NAME,PROGRAM,PROGRAM_TYPE,SITE_STATUS,CLEANUP_STATUS_TYPE_KEY"),
         "dep_cont":       lambda: fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=CONT_WHERE, out_fields=DEP_FIELDS),
         "dep_lust":       lambda: fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=LUST_WHERE, out_fields=DEP_FIELDS),
         "dep_vol":        lambda: fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=VOL_WHERE, out_fields=DEP_FIELDS),
