@@ -147,24 +147,33 @@ DEP_NC = {"SRCO","ISSA","SSA","PA","SI","RI","FS","RD","RA","OAM",
 
 # ── EPA ECHO RCRA ─────────────────────────────────────────────────────────────
 def echo_rcra(lat, lon, radius_miles, handler_types):
-    try:
-        r = requests.get("https://echodata.epa.gov/echo/rcra_rest_services.get_facility_info",
-            params={"output":"JSON","p_lat":lat,"p_lon":lon,"p_radius_mi":radius_miles,
-                    "p_htype":handler_types,"qcolumns":"1,2,3,4,5,6,38,39,40"}, timeout=20)
-        r.raise_for_status()
-        facilities = r.json().get("Results", {}).get("Facilities", [])
-        sites = []
-        for f in facilities:
-            flat = float(f.get("FacLat", 0) or 0)
-            flon = float(f.get("FacLong", 0) or 0)
-            dist = round(haversine(lat, lon, flat, flon), 2) if flat else 999.0
-            status = f.get("RCRAComplianceStatus", "") or ""
-            nc = "CA" in handler_types and status not in ["No Violation Identified", ""]
-            sites.append({"name": f.get("FacName","Unknown"), "distance": dist, "status": status, "nc": nc})
-        sites.sort(key=lambda s: s["distance"])
-        return {"count": len(sites), "sites": sites}
-    except Exception as e:
-        return {"count": 0, "sites": [], "error": str(e)}
+    import time
+    url = "https://echodata.epa.gov/echo/rcra_rest_services.get_facility_info"
+    params = {"output":"JSON","p_lat":lat,"p_lon":lon,"p_radius_mi":radius_miles,
+              "p_htype":handler_types,"qcolumns":"1,2,3,4,5,6,38,39,40"}
+    for attempt in range(3):
+        try:
+            if attempt > 0:
+                time.sleep(2 * attempt)  # 2s, 4s backoff on retry
+            r = requests.get(url, params=params, timeout=20)
+            if r.status_code == 429:
+                time.sleep(3 * (attempt + 1))  # extra wait on rate limit
+                continue
+            r.raise_for_status()
+            facilities = r.json().get("Results", {}).get("Facilities", [])
+            sites = []
+            for f in facilities:
+                flat = float(f.get("FacLat", 0) or 0)
+                flon = float(f.get("FacLong", 0) or 0)
+                dist = round(haversine(lat, lon, flat, flon), 2) if flat else 999.0
+                status = f.get("RCRAComplianceStatus", "") or ""
+                nc = "CA" in handler_types and status not in ["No Violation Identified", ""]
+                sites.append({"name": f.get("FacName","Unknown"), "distance": dist, "status": status, "nc": nc})
+            sites.sort(key=lambda s: s["distance"])
+            return {"count": len(sites), "sites": sites}
+        except Exception as e:
+            last_error = str(e)
+    return {"count": 0, "sites": [], "error": f"Failed after 3 attempts: {last_error}"}
 
 # ── USACE FUDS ────────────────────────────────────────────────────────────────
 def fuds(lat, lon, radius_miles):
