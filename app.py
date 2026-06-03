@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.15
+Phase I ESA Database Proxy — v9.16
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -182,19 +182,25 @@ ERIC_NC = {"OPEN","ONHOLD"}  # CLOSED and CLOSEDWCOND = complete
 
 # ── EPA ECHO RCRA ─────────────────────────────────────────────────────────────
 def echo_rcra(lat, lon, radius_miles, handler_types):
-    import time
+    """Query EPA ECHO RCRA facilities. Uses ECHO get_facilities for broader compatibility."""
     url = "https://echodata.epa.gov/echo/rcra_rest_services.get_facility_info"
-    params = {"output":"JSON","p_lat":lat,"p_lon":lon,"p_radius_mi":radius_miles,
-              "p_htype":handler_types,"qcolumns":"1,2,3,4,5,6,38,39,40"}
+    params = {
+        "output":      "JSON",
+        "p_lat":       lat,
+        "p_lon":       lon,
+        "p_radius_mi": radius_miles,
+        "p_htype":     handler_types,
+        "qcolumns":    "1,2,3,4,5,6,38,39,40",
+    }
     last_error = "Unknown error"
     for attempt in range(2):
         try:
             if attempt > 0:
-                time.sleep(1)
-            r = requests.get(url, params=params, timeout=10)
+                time.sleep(2)
+            r = requests.get(url, params=params, timeout=15)
             if r.status_code == 429:
                 last_error = "Rate limited (429)"
-                time.sleep(2)
+                time.sleep(3)
                 continue
             r.raise_for_status()
             facilities = r.json().get("Results", {}).get("Facilities", [])
@@ -210,23 +216,74 @@ def echo_rcra(lat, lon, radius_miles, handler_types):
             return {"count": len(sites), "sites": sites}
         except Exception as e:
             last_error = str(e)
-    return {"count": 0, "sites": [], "error": f"Failed after 3 attempts: {last_error}"}
+    return {"count": 0, "sites": [], "error": f"Failed: {last_error}"}
+
+
+def echo_rcra_all(lat, lon):
+    """
+    Query all RCRA facility types in a single ECHO call to avoid rate limiting.
+    Returns dict keyed by category: ca, tsd, gen.
+    """
+    url = "https://echodata.epa.gov/echo/rcra_rest_services.get_facility_info"
+    # Query all types at once using the widest radius — filter by type afterward
+    params = {
+        "output":      "JSON",
+        "p_lat":       lat,
+        "p_lon":       lon,
+        "p_radius_mi": 1.0,  # widest radius — we filter per category below
+        "qcolumns":    "1,2,3,4,5,6,38,39,40,41",
+    }
+    last_error = "Unknown error"
+    for attempt in range(2):
+        try:
+            if attempt > 0:
+                time.sleep(2)
+            r = requests.get(url, params=params, timeout=15)
+            if r.status_code == 429:
+                last_error = "Rate limited (429)"
+                time.sleep(3)
+                continue
+            r.raise_for_status()
+            facilities = r.json().get("Results", {}).get("Facilities", [])
+            ca_sites, tsd_sites, gen_sites = [], [], []
+            for f in facilities:
+                flat = float(f.get("FacLat", 0) or 0)
+                flon = float(f.get("FacLong", 0) or 0)
+                dist = round(haversine(lat, lon, flat, flon), 2) if flat else 999.0
+                status = f.get("RCRAComplianceStatus", "") or ""
+                htype = str(f.get("RCRAHandlerType", "") or "").upper()
+                name  = f.get("FacName","Unknown")
+                # CA — within 1 mile
+                if dist <= 1.0 and "CA" in htype:
+                    nc = status not in ["No Violation Identified",""]
+                    ca_sites.append({"name": name, "distance": dist, "status": status, "nc": nc})
+                # TSD — within 0.5 miles
+                if dist <= 0.5 and any(t in htype for t in ["TSD","TSDF","LQTSDF"]):
+                    tsd_sites.append({"name": name, "distance": dist, "status": status, "nc": False})
+                # Generators — within 0.05 miles
+                if dist <= 0.05 and any(t in htype for t in ["LQG","SQG","VSQG","CESQG"]):
+                    gen_sites.append({"name": name, "distance": dist, "status": status, "nc": False})
+            return {
+                "ca":  {"count": len(ca_sites),  "sites": sorted(ca_sites,  key=lambda s: s["distance"])},
+                "tsd": {"count": len(tsd_sites), "sites": sorted(tsd_sites, key=lambda s: s["distance"])},
+                "gen": {"count": len(gen_sites), "sites": sorted(gen_sites, key=lambda s: s["distance"])},
+            }
+        except Exception as e:
+            last_error = str(e)
+    empty = {"count": 0, "sites": [], "error": f"Failed: {last_error}"}
+    return {"ca": empty, "tsd": empty, "gen": empty}
 
 # ── USACE FUDS ────────────────────────────────────────────────────────────────
 def fuds(lat, lon, radius_miles):
-    """Query USACE FUDS using envelope spatial query — deduplicate by site name."""
+    """Query USACE FUDS using WHERE clause on lat/lon attributes — deduplicate by site name."""
     url = "https://services7.arcgis.com/n1YM8pTrFmm7L4hs/arcgis/rest/services/FUDS_Projects/FeatureServer/0/query"
+    mn_lat, mx_lat, mn_lon, mx_lon = bbox(lat, lon, radius_miles)
+    where = f"LATITUDE>={mn_lat} AND LATITUDE<={mx_lat} AND LONGITUDE>={mn_lon} AND LONGITUDE<={mx_lon}"
     try:
         r = requests.get(url, params={
-            "geometry":       f"{lon},{lat}",
-            "geometryType":   "esriGeometryPoint",
-            "spatialRel":     "esriSpatialRelIntersects",
-            "distance":       radius_miles * 1609.34,
-            "units":          "esriSRUnit_Meter",
-            "inSR":           "4326",
-            "outSR":          "4326",
+            "where":          where,
             "outFields":      "PROJECT_NAME,PROJECT_STATUS,SITE_NAME,LATITUDE,LONGITUDE",
-            "returnGeometry": "true",
+            "returnGeometry": "false",
             "f":              "json",
         }, timeout=20)
         r.raise_for_status()
@@ -235,38 +292,34 @@ def fuds(lat, lon, radius_miles):
         return {"count": 0, "sites": [], "error": str(e)}
     if "error" in data:
         return {"count": 0, "sites": [], "error": data["error"]}
-    sites = []
-    seen_names = set()
     raw_sites = []
     for feat in data.get("features", []):
         attrs  = feat.get("attributes", {})
-        geom   = feat.get("geometry", {})
         status = str(attrs.get("PROJECT_STATUS","") or "")
-        flat   = float(attrs.get("LATITUDE", 0) or geom.get("y", 0))
-        flon   = float(attrs.get("LONGITUDE", 0) or geom.get("x", 0))
-        dist   = round(haversine(lat, lon, flat, flon), 2) if flat else 999.0
+        flat   = float(attrs.get("LATITUDE", 0) or 0)
+        flon   = float(attrs.get("LONGITUDE", 0) or 0)
+        if not flat or not flon:
+            continue
+        dist = haversine(lat, lon, flat, flon)
         if dist > radius_miles:
             continue
-        # Use SITE_NAME for deduplication if available, else PROJECT_NAME
         site_name = str(attrs.get("SITE_NAME") or attrs.get("PROJECT_NAME") or "Unknown FUDS")
         proj_name = str(attrs.get("PROJECT_NAME") or site_name)
         nc = status.upper() not in {"CLOSED","COMPLETE","NO FURTHER ACTION","NFA","INELIGIBLE"}
         raw_sites.append({"site_name": site_name, "name": proj_name,
-                          "distance": dist, "status": status, "nc": nc})
-    # Deduplicate by site name — keep closest, flag NC if any record is NC
+                          "distance": round(dist,2), "status": status, "nc": nc})
+    # Deduplicate by site name — keep closest, upgrade to NC if any record is NC
     site_groups = {}
     for s in raw_sites:
         key = s["site_name"]
         if key not in site_groups:
             site_groups[key] = s
         else:
-            # Keep closest, OR if this one is NC upgrade the existing
             if s["distance"] < site_groups[key]["distance"]:
                 site_groups[key]["distance"] = s["distance"]
             if s["nc"]:
                 site_groups[key]["nc"] = True
     sites = sorted(site_groups.values(), key=lambda s: s["distance"])
-    # Clean up internal field
     for s in sites:
         s.pop("site_name", None)
     return {"count": len(sites), "sites": sites}
@@ -438,14 +491,17 @@ def query():
 
     def mk(fn): return lambda p: {"count": len(p), "sites": p}
 
+    # Single ECHO call for all RCRA types — avoids rate limiting
+    echo_results = echo_rcra_all(lat, lon)
+
     task_map = {
         "npl":            lambda: frs_npl(lat, lon, 1.0, status_filter=["Currently on the Final NPL","Proposed for NPL"]),
         "fuds":           lambda: fuds(lat, lon, 1.0),
-        "rcra_ca":        lambda: echo_rcra(lat, lon, 1.0, "CA"),
+        "rcra_ca":        lambda: echo_results["ca"],
         "state_superfund":get_state_superfund,
         "npl_del":        get_delisted,
         "cercla":         lambda: cercla(lat, lon, 0.5),
-        "rcra_tsd":       lambda: echo_rcra(lat, lon, 0.5, "TSD"),
+        "rcra_tsd":       lambda: echo_results["tsd"],
         "haz":            get_haz,
         "cont":           lambda: (lambda s: {"count": len(s), "sites": s})(merge_dedup(
                               parse_fdep(fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=CONT_WHERE, out_fields=DEP_FIELDS), lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC),
@@ -457,7 +513,7 @@ def query():
                               eric_query(lat, lon, 0.5, program_filter=["Drycleaning Solvent Cleanup Program","Responsible Party Cleanup"]))),
         "brown":          get_brownfields,
         "ust":            lambda: mk(None)(parse_fdep(fdep_query(STCM_TANKS, lat, lon, 0.05, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"), lat, lon, "FACILITY_NAME", "FACILITY_STATUS", {"Active","ACTIVE","Open","OPEN"})),
-        "rcra_gen":       lambda: echo_rcra(lat, lon, 0.05, "LQG,SQG,VSQG"),
+        "rcra_gen":       lambda: echo_results["gen"],
         "ic":             lambda: mk(None)(parse_fdep(fdep_query(ICR, lat, lon, 0.05, out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE"), lat, lon, "SITE_NAME", "IC_STATUS", {"ACTIVE","Active"})),
         "erns":           lambda: erns(zipcode),
     }
@@ -557,7 +613,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.15", "name": "Phase I ESA Proxy v9.15"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.16", "name": "Phase I ESA Proxy v9.16"})
 
 @app.route("/browndebug", methods=["GET"])
 def browndebug():
