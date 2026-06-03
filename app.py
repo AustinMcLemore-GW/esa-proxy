@@ -371,8 +371,8 @@ def query():
         "lust":           get_lust,
         "vol":            lambda: mk(None)(parse_fdep(fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=VOL_WHERE, out_fields=DEP_FIELDS), lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)),
         "brown":          get_brownfields,
-        "ust":            lambda: mk(None)(parse_fdep(fdep_query(STCM_TANKS, lat, lon, 0.15, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"), lat, lon, "FACILITY_NAME", "FACILITY_STATUS", {"Active","ACTIVE","Open","OPEN"})),
-        "rcra_gen":       lambda: echo_rcra(lat, lon, 0.15, "LQG,SQG,VSQG"),
+        "ust":            lambda: mk(None)(parse_fdep(fdep_query(STCM_TANKS, lat, lon, 0.05, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"), lat, lon, "FACILITY_NAME", "FACILITY_STATUS", {"Active","ACTIVE","Open","OPEN"})),
+        "rcra_gen":       lambda: echo_rcra(lat, lon, 0.05, "LQG,SQG,VSQG"),
         "ic":             lambda: mk(None)(parse_fdep(fdep_query(ICR, lat, lon, 0.05, out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE"), lat, lon, "SITE_NAME", "IC_STATUS", {"ACTIVE","Active"})),
         "erns":           lambda: erns(zipcode),
     }
@@ -409,7 +409,7 @@ def debug():
     routes = {
         "chaz":           lambda: fdep_query(CHAZ, lat, lon, 0.5, out_fields="ME_NAME,FAC_INS_TYPE,GENERATOR,PERMITTED_CONSENTED"),
         "stcm_lust":      lambda: fdep_query(STCM_LUST, lat, lon, 0.5, out_fields="SITE_NAME,SITE_STATUS,DISCHARGE_DATE"),
-        "stcm_tanks":     lambda: fdep_query(STCM_TANKS, lat, lon, 0.15, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"),
+        "stcm_tanks":     lambda: fdep_query(STCM_TANKS, lat, lon, 0.05, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"),
         "solid":          lambda: fdep_query(SOLID_WASTE, lat, lon, 0.5, out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"),
         "ic":             lambda: fdep_query(ICR, lat, lon, 0.05, out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE"),
         "dep_cont":       lambda: fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=CONT_WHERE, out_fields=DEP_FIELDS),
@@ -423,7 +423,7 @@ def debug():
         "frs_npl":        lambda: frs_npl(lat, lon, 1.0),
         "echo_rcra_ca":   lambda: echo_rcra(lat, lon, 1.0, "CA"),
         "echo_rcra_tsd":  lambda: echo_rcra(lat, lon, 0.5, "TSD"),
-        "echo_rcra_gen":  lambda: echo_rcra(lat, lon, 0.15, "LQG,SQG,VSQG"),
+        "echo_rcra_gen":  lambda: echo_rcra(lat, lon, 0.05, "LQG,SQG,VSQG"),
         "fuds":           lambda: fuds(lat, lon, 1.0),
     }
     if db not in routes:
