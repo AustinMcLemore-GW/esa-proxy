@@ -243,26 +243,11 @@ def echo_rcra(lat, lon, radius_miles, handler_types):
 
 def frs_rcra_all(lat, lon):
     """
-    Query RCRA facilities from EPA FRS — no rate limiting.
-    Uses FRS spatial layers which work reliably from cloud hosting IPs.
-    Returns CA (1mi), TSD (0.5mi), generators (0.05mi) — no compliance status.
+    Query RCRA TSD and LQG facilities from EPA FRS — no rate limiting.
+    CA (corrective action) requires ECHO compliance data — handled separately.
+    TSD from layer 20, LQG generators from layer 18.
     """
     fields = "PRIMARY_NAME,ACTIVE_STATUS,LATITUDE83,LONGITUDE83"
-
-    # CA facilities — layer 16 (active RCRA) filtered, within 1 mile
-    ca_data = frs_spatial(FRS_RCRA_ACT, lat, lon, 1.0, out_fields=fields)
-    ca_sites = []
-    for feat in ca_data.get("features", []):
-        attrs = feat.get("attributes", {})
-        flat = float(attrs.get("LATITUDE83", 0) or 0)
-        flon = float(attrs.get("LONGITUDE83", 0) or 0)
-        if not flat or not flon: continue
-        dist = haversine(lat, lon, flat, flon)
-        if dist > 1.0: continue
-        # FRS RCRA_ACTIVE layer — being listed here indicates active CA status
-        status = str(attrs.get("ACTIVE_STATUS","") or "")
-        ca_sites.append({"name": str(attrs.get("PRIMARY_NAME","Unknown")),
-                         "distance": round(dist,2), "status": status, "nc": True})
 
     # TSD facilities — layer 20, within 0.5 miles
     tsd_data = frs_spatial(FRS_RCRA_TSD, lat, lon, 0.5, out_fields=fields)
@@ -292,8 +277,9 @@ def frs_rcra_all(lat, lon):
         gen_sites.append({"name": str(attrs.get("PRIMARY_NAME","Unknown")),
                           "distance": round(dist,2), "status": status, "nc": False})
 
+    # CA requires ECHO — return empty, will be filled by ECHO fallback
     return {
-        "ca":  {"count": len(ca_sites),  "sites": sorted(ca_sites,  key=lambda s: s["distance"])},
+        "ca":  {"count": 0, "sites": [], "note": "CA requires ECHO compliance data"},
         "tsd": {"count": len(tsd_sites), "sites": sorted(tsd_sites, key=lambda s: s["distance"])},
         "gen": {"count": len(gen_sites), "sites": sorted(gen_sites, key=lambda s: s["distance"])},
     }
@@ -593,13 +579,15 @@ def query():
 
     def mk(fn): return lambda p: {"count": len(p), "sites": p}
 
-    # Try FRS RCRA first (no rate limiting), fall back to ECHO if FRS fails
+    # RCRA: FRS for TSD/generators (no rate limiting), ECHO for CA (compliance data)
     frs_rcra_results = frs_rcra_all(lat, lon)
-    # Use FRS results if they returned without error, otherwise try ECHO
-    if any(frs_rcra_results[k].get("error") for k in ["ca","tsd","gen"]):
-        echo_results = echo_rcra_all(lat, lon)
-    else:
-        echo_results = frs_rcra_results
+    # Try ECHO for CA — if rate limited, CA shows 0
+    echo_ca_result = echo_rcra(lat, lon, 1.0, "CA")
+    echo_results = {
+        "ca":  echo_ca_result,
+        "tsd": frs_rcra_results["tsd"],
+        "gen": frs_rcra_results["gen"],
+    }
 
     task_map = {
         "npl":            lambda: frs_npl(lat, lon, 1.0, status_filter=["Currently on the Final NPL","Proposed for NPL"]),
@@ -743,7 +731,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.44", "name": "Phase I ESA Proxy v9.44"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.45", "name": "Phase I ESA Proxy v9.45"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
