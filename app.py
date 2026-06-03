@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.29
+Phase I ESA Database Proxy — v9.32
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -446,7 +446,10 @@ def query():
                 try: dist = round(haversine(lat, lon, float(geom["y"]), float(geom["x"])), 2)
                 except: pass
             gen = str(attrs.get("GENERATOR","") or ""); perm = str(attrs.get("PERMITTED_CONSENTED","") or "")
-            nc = gen in {"LQG","SQG","VSQG"} or perm == "Y"
+            # CHAZ is a facility registry only — being a generator is not a violation.
+            # NC is determined by ECHO RCRA compliance data, not generator status.
+            # All CHAZ facilities count toward paragraph 2 total but never generate bullets.
+            nc = False
             raw.append({"name": name, "distance": dist, "status": str(attrs.get("FAC_INS_TYPE","") or ""), "nc": nc})
         # Deduplicate by name — keep closest, upgrade to NC if any record is NC
         seen = {}
@@ -649,7 +652,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.29", "name": "Phase I ESA Proxy v9.29"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.32", "name": "Phase I ESA Proxy v9.32"})
 
 @app.route("/browndebug", methods=["GET"])
 def browndebug():
