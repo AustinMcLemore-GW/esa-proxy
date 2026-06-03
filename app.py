@@ -174,7 +174,7 @@ SUPER_WHERE = "CLCC_CLEANUP_CATEGORY_KEY='SUPER'"
 CONT_WHERE  = "CLCC_CLEANUP_CATEGORY_KEY IN ('OTHCU','PFAS')"
 LUST_WHERE  = "CLCC_CLEANUP_CATEGORY_KEY='PETRO'"
 BROWN_WHERE = "CLCC_CLEANUP_CATEGORY_KEY='BROWN'"
-VOL_WHERE   = "SOURCE_DATABASE_NAME IN ('DRYCLEANING','RESPONSPARTY')"
+VOL_WHERE   = "SOURCE_DATABASE_NAME='DRYCLEANING'"
 DEP_NC = {"SRCO","ISSA","SSA","PA","SI","RI","FS","RD","RA","OAM",
            "OPEN","ACTIVE","INPROCESS","AWAITFUND","AWAITSITEACCESS","ELIGREVIEW"}
 # ERIC layer 8 SITE_STATUS values that are non-compliant (active cleanup)
@@ -186,13 +186,15 @@ def echo_rcra(lat, lon, radius_miles, handler_types):
     url = "https://echodata.epa.gov/echo/rcra_rest_services.get_facility_info"
     params = {"output":"JSON","p_lat":lat,"p_lon":lon,"p_radius_mi":radius_miles,
               "p_htype":handler_types,"qcolumns":"1,2,3,4,5,6,38,39,40"}
+    last_error = "Unknown error"
     for attempt in range(3):
         try:
             if attempt > 0:
-                time.sleep(2 * attempt)  # 2s, 4s backoff on retry
+                time.sleep(2 * attempt)
             r = requests.get(url, params=params, timeout=20)
             if r.status_code == 429:
-                time.sleep(3 * (attempt + 1))  # extra wait on rate limit
+                last_error = "Rate limited (429)"
+                time.sleep(3 * (attempt + 1))
                 continue
             r.raise_for_status()
             facilities = r.json().get("Results", {}).get("Facilities", [])
@@ -359,7 +361,8 @@ def query():
         s2 = parse_fdep(fdep_query(STCM_LUST, lat, lon, 0.5, out_fields="SITE_NAME,SITE_STATUS,DISCHARGE_DATE"),
             lat, lon, "SITE_NAME", "SITE_STATUS", {"OPEN","ACTIVE","Active","Open"})
         # ERIC layer 8 — Petroleum Restoration Program and Responsible Party petroleum sites
-        s3 = eric_query(lat, lon, 0.5, program_filter=["Petroleum Restoration Program","Responsible Party Cleanup"])
+        # ERIC layer 8 — petroleum programs only for LUST
+        s3 = eric_query(lat, lon, 0.5, program_filter=["Petroleum Restoration Program","Responsible Party Cleanup","Department of Defense"])
         all_sites = merge_dedup(s1 + s2, s3)
         return {"count": len(all_sites), "sites": all_sites}
 
@@ -410,7 +413,7 @@ def query():
         "lust":           get_lust,
         "vol":            lambda: (lambda s: {"count": len(s), "sites": s})(merge_dedup(
                               parse_fdep(fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=VOL_WHERE, out_fields=DEP_FIELDS), lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC),
-                              eric_query(lat, lon, 0.5, program_filter=["Drycleaning Solvent Cleanup Program","Responsible Party Cleanup"]))),
+                              eric_query(lat, lon, 0.5, program_filter=["Drycleaning Solvent Cleanup Program"]))),
         "brown":          get_brownfields,
         "ust":            lambda: mk(None)(parse_fdep(fdep_query(STCM_TANKS, lat, lon, 0.05, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"), lat, lon, "FACILITY_NAME", "FACILITY_STATUS", {"Active","ACTIVE","Open","OPEN"})),
         "rcra_gen":       lambda: echo_rcra(lat, lon, 0.05, "LQG,SQG,VSQG"),
