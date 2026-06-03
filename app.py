@@ -1,12 +1,12 @@
 """
-Phase I ESA Database Proxy — v9.13
+Phase I ESA Database Proxy — v9.14
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import requests, math
+import requests, math, time
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app)
@@ -46,7 +46,7 @@ def fdep_query(url, lat, lon, radius_miles, where="1=1", out_fields="*"):
         "f":              "json",
     }
     try:
-        r = requests.get(url, params=params, timeout=20)
+        r = requests.get(url, params=params, timeout=10)
         r.raise_for_status()
         return r.json()
     except Exception as e:
@@ -191,7 +191,7 @@ def echo_rcra(lat, lon, radius_miles, handler_types):
         try:
             if attempt > 0:
                 time.sleep(2 * attempt)
-            r = requests.get(url, params=params, timeout=20)
+            r = requests.get(url, params=params, timeout=10)
             if r.status_code == 429:
                 last_error = "Rate limited (429)"
                 time.sleep(3 * (attempt + 1))
@@ -439,11 +439,10 @@ def query():
     def mk(fn): return lambda p: {"count": len(p), "sites": p}
 
     # Run ECHO calls sequentially first to avoid rate limiting
-    import time
     echo_ca  = echo_rcra(lat, lon, 1.0, "CA")
-    time.sleep(1)
+    time.sleep(0.5)
     echo_tsd = echo_rcra(lat, lon, 0.5, "TSD")
-    time.sleep(1)
+    time.sleep(0.5)
     echo_gen = echo_rcra(lat, lon, 0.05, "LQG,SQG,VSQG")
 
     task_map = {
@@ -565,7 +564,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.13", "name": "Phase I ESA Proxy v9.13"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.14", "name": "Phase I ESA Proxy v9.14"})
 
 @app.route("/browndebug", methods=["GET"])
 def browndebug():
