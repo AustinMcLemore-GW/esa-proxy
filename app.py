@@ -516,7 +516,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.0"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.10"})
 
 @app.route("/browndebug", methods=["GET"])
 def browndebug():
