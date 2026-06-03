@@ -521,23 +521,6 @@ def query():
             is_duplicate = any(len(epa_words & fk) >= 2 for fk in fdep_keywords)
             if not is_duplicate:
                 filtered_epa.append(epa)
-        # Drop EPA ACRES sites that are within 0.15 miles of any FDEP brownfield site
-        # (same physical location reported by two different databases)
-        # Re-fetch FDEP coords from geometry
-        fdep_coords = []
-        for feat in fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=BROWN_WHERE,
-                               out_fields="BUSINESS_NAME").get("features", []):
-            g = feat.get("geometry", {})
-            if g and "x" in g and "y" in g:
-                fdep_coords.append((float(g["y"]), float(g["x"])))
-        filtered_epa = []
-        for epa in epa_sites:
-            close_to_fdep = any(
-                haversine(epa["_lat"], epa["_lon"], fc[0], fc[1]) < 0.05
-                for fc in fdep_coords
-            )
-            if not close_to_fdep:
-                filtered_epa.append(epa)
         # Remove internal coords before returning
         for s in filtered_epa:
             s.pop("_lat", None); s.pop("_lon", None)
@@ -693,7 +676,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.40", "name": "Phase I ESA Proxy v9.40"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.41", "name": "Phase I ESA Proxy v9.41"})
 
 @app.route("/browndebug", methods=["GET"])
 def browndebug():
