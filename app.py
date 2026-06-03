@@ -72,7 +72,7 @@ def eric_query(lat, lon, radius_miles, program_filter=None):
         where = f"PROGRAM IN ('{progs}')"
     data = fdep_query(ERIC_LAYER, lat, lon, radius_miles,
         where=where,
-        out_fields="SITE_NAME,PROGRAM,PROGRAM_TYPE,SITE_STATUS,ERIC_SITE_ID")
+        out_fields="SITE_NAME,PROGRAM,SITE_STATUS,ERIC_ID")
     sites = []
     for feat in data.get("features", []):
         attrs = feat.get("attributes", {})
@@ -84,8 +84,7 @@ def eric_query(lat, lon, radius_miles, program_filter=None):
             except: pass
         status = str(attrs.get("SITE_STATUS","") or "")
         nc = status.upper() in ERIC_NC
-        sites.append({"name": name, "distance": dist, "status": status, "nc": nc,
-                      "program": str(attrs.get("PROGRAM","") or "")})
+        sites.append({"name": name, "distance": dist, "status": status, "nc": nc})
     sites.sort(key=lambda s: s["distance"])
     return sites
 
@@ -454,7 +453,7 @@ def debug():
         "stcm_tanks":     lambda: fdep_query(STCM_TANKS, lat, lon, 0.05, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"),
         "solid":          lambda: fdep_query(SOLID_WASTE, lat, lon, 0.5, out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"),
         "ic":             lambda: fdep_query(ICR, lat, lon, 0.05, out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE"),
-        "eric":           lambda: fdep_query(ERIC_LAYER, lat, lon, 0.5, out_fields="SITE_NAME,PROGRAM,PROGRAM_TYPE,SITE_STATUS,ERIC_SITE_ID"),
+        "eric":           lambda: fdep_query(ERIC_LAYER, lat, lon, 0.5, out_fields="SITE_NAME,PROGRAM,SITE_STATUS,ERIC_ID"),
         "dep_cont":       lambda: fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=CONT_WHERE, out_fields=DEP_FIELDS),
         "dep_lust":       lambda: fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=LUST_WHERE, out_fields=DEP_FIELDS),
         "dep_vol":        lambda: fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=VOL_WHERE, out_fields=DEP_FIELDS),
