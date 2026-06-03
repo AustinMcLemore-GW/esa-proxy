@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.24
+Phase I ESA Database Proxy — v9.28
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -542,6 +542,23 @@ def query():
                 if key not in res:
                     res[key] = {"count": 0, "sites": [], "error": "Query timed out"}
 
+    # ── Cross-category deduplication ─────────────────────────────────────────
+    # A site appearing in multiple DEP Cleanup categories should only be counted
+    # in the highest-priority category. Priority: brown > state_superfund > cont > vol > lust
+    dedup_priority = ["state_superfund", "brown", "lust", "cont", "vol"]
+    seen_globally = set()
+    for category in dedup_priority:
+        if category not in res or "sites" not in res[category]:
+            continue
+        filtered = []
+        for site in res[category].get("sites", []):
+            name_key = site["name"].strip().upper()
+            if name_key not in seen_globally:
+                seen_globally.add(name_key)
+                filtered.append(site)
+        res[category]["sites"] = filtered
+        res[category]["count"] = len(filtered)
+
     return jsonify(res)
 
 # ── Debug endpoint ────────────────────────────────────────────────────────────
@@ -623,7 +640,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.24", "name": "Phase I ESA Proxy v9.24"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.28", "name": "Phase I ESA Proxy v9.28"})
 
 @app.route("/browndebug", methods=["GET"])
 def browndebug():
