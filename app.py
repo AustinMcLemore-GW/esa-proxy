@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.14
+Phase I ESA Database Proxy — v9.15
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -187,14 +187,14 @@ def echo_rcra(lat, lon, radius_miles, handler_types):
     params = {"output":"JSON","p_lat":lat,"p_lon":lon,"p_radius_mi":radius_miles,
               "p_htype":handler_types,"qcolumns":"1,2,3,4,5,6,38,39,40"}
     last_error = "Unknown error"
-    for attempt in range(3):
+    for attempt in range(2):
         try:
             if attempt > 0:
-                time.sleep(2 * attempt)
+                time.sleep(1)
             r = requests.get(url, params=params, timeout=10)
             if r.status_code == 429:
                 last_error = "Rate limited (429)"
-                time.sleep(3 * (attempt + 1))
+                time.sleep(2)
                 continue
             r.raise_for_status()
             facilities = r.json().get("Results", {}).get("Facilities", [])
@@ -438,21 +438,14 @@ def query():
 
     def mk(fn): return lambda p: {"count": len(p), "sites": p}
 
-    # Run ECHO calls sequentially first to avoid rate limiting
-    echo_ca  = echo_rcra(lat, lon, 1.0, "CA")
-    time.sleep(0.5)
-    echo_tsd = echo_rcra(lat, lon, 0.5, "TSD")
-    time.sleep(0.5)
-    echo_gen = echo_rcra(lat, lon, 0.05, "LQG,SQG,VSQG")
-
     task_map = {
         "npl":            lambda: frs_npl(lat, lon, 1.0, status_filter=["Currently on the Final NPL","Proposed for NPL"]),
         "fuds":           lambda: fuds(lat, lon, 1.0),
-        "rcra_ca":        lambda: echo_ca,
+        "rcra_ca":        lambda: echo_rcra(lat, lon, 1.0, "CA"),
         "state_superfund":get_state_superfund,
         "npl_del":        get_delisted,
         "cercla":         lambda: cercla(lat, lon, 0.5),
-        "rcra_tsd":       lambda: echo_tsd,
+        "rcra_tsd":       lambda: echo_rcra(lat, lon, 0.5, "TSD"),
         "haz":            get_haz,
         "cont":           lambda: (lambda s: {"count": len(s), "sites": s})(merge_dedup(
                               parse_fdep(fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=CONT_WHERE, out_fields=DEP_FIELDS), lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC),
@@ -464,7 +457,7 @@ def query():
                               eric_query(lat, lon, 0.5, program_filter=["Drycleaning Solvent Cleanup Program","Responsible Party Cleanup"]))),
         "brown":          get_brownfields,
         "ust":            lambda: mk(None)(parse_fdep(fdep_query(STCM_TANKS, lat, lon, 0.05, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"), lat, lon, "FACILITY_NAME", "FACILITY_STATUS", {"Active","ACTIVE","Open","OPEN"})),
-        "rcra_gen":       lambda: echo_gen,
+        "rcra_gen":       lambda: echo_rcra(lat, lon, 0.05, "LQG,SQG,VSQG"),
         "ic":             lambda: mk(None)(parse_fdep(fdep_query(ICR, lat, lon, 0.05, out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE"), lat, lon, "SITE_NAME", "IC_STATUS", {"ACTIVE","Active"})),
         "erns":           lambda: erns(zipcode),
     }
@@ -564,7 +557,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.14", "name": "Phase I ESA Proxy v9.14"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.15", "name": "Phase I ESA Proxy v9.15"})
 
 @app.route("/browndebug", methods=["GET"])
 def browndebug():
