@@ -319,13 +319,25 @@ def query():
         fdep_sites = parse_fdep(fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=BROWN_WHERE, out_fields=DEP_FIELDS),
             lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)
         epa_data = frs_spatial(FRS_ACRES, lat, lon, 0.5,
-            out_fields="PRIMARY_NAME,LATITUDE83,LONGITUDE83,ACTIVE_STATUS")
-        epa_sites = parse_frs(epa_data, lat, lon, "PRIMARY_NAME", "LATITUDE83", "LONGITUDE83", 0.5,
-            status_field="ACTIVE_STATUS",
-            nc_statuses=None)
-        for s in epa_sites:
-            st = (s.get("status") or "").upper()
-            s["nc"] = st not in {"COMPLETE","COMPLETED","DELETED","ARCHIVED","READY FOR ANTICIPATED USE"}
+            out_fields="PRIMARY_NAME,LATITUDE83,LONGITUDE83,ACTIVE_STATUS,INTEREST_TYPE")
+        # Only include confirmed brownfield properties from ACRES
+        epa_sites = []
+        for feat in epa_data.get("features", []):
+            attrs = feat.get("attributes", {})
+            interest = str(attrs.get("INTEREST_TYPE","") or "")
+            if interest != "BROWNFIELDS PROPERTY":
+                continue
+            flat = float(attrs.get("LATITUDE83", 0) or 0)
+            flon = float(attrs.get("LONGITUDE83", 0) or 0)
+            if not flat or not flon:
+                continue
+            dist = haversine(lat, lon, flat, flon)
+            if dist > 0.5:
+                continue
+            st = str(attrs.get("ACTIVE_STATUS","") or "").upper()
+            nc = st not in {"COMPLETE","COMPLETED","DELETED","ARCHIVED","READY FOR ANTICIPATED USE"}
+            epa_sites.append({"name": str(attrs.get("PRIMARY_NAME","Unknown")),
+                              "distance": round(dist,2), "status": str(attrs.get("ACTIVE_STATUS","") or ""), "nc": nc})
         seen = set(); out = []
         for s in sorted(fdep_sites+epa_sites, key=lambda x: x["distance"]):
             if s["name"] not in seen: seen.add(s["name"]); out.append(s)
