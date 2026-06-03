@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.35
+Phase I ESA Database Proxy — v9.36
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -510,12 +510,19 @@ def query():
             epa_sites.append({"name": str(attrs.get("PRIMARY_NAME","Unknown")),
                               "distance": round(dist,2), "status": str(attrs.get("ACTIVE_STATUS","") or ""),
                               "nc": nc, "_lat": flat, "_lon": flon})
-        # Drop EPA ACRES sites that are within 0.05 miles of any FDEP brownfield site
+        # Drop EPA ACRES sites that are within 0.15 miles of any FDEP brownfield site
         # (same physical location reported by two different databases)
+        # Re-fetch FDEP coords from geometry
+        fdep_coords = []
+        for feat in fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=BROWN_WHERE,
+                               out_fields="BUSINESS_NAME").get("features", []):
+            g = feat.get("geometry", {})
+            if g and "x" in g and "y" in g:
+                fdep_coords.append((float(g["y"]), float(g["x"])))
         filtered_epa = []
         for epa in epa_sites:
             close_to_fdep = any(
-                haversine(epa["_lat"], epa["_lon"], fc[0], fc[1]) < 0.05
+                haversine(epa["_lat"], epa["_lon"], fc[0], fc[1]) < 0.15
                 for fc in fdep_coords
             )
             if not close_to_fdep:
@@ -675,7 +682,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.35", "name": "Phase I ESA Proxy v9.35"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.36", "name": "Phase I ESA Proxy v9.36"})
 
 @app.route("/browndebug", methods=["GET"])
 def browndebug():
