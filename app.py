@@ -454,19 +454,21 @@ def browndebug():
     # FDEP brownfields
     fdep_raw = fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=BROWN_WHERE, out_fields=DEP_FIELDS)
     fdep_sites = parse_fdep(fdep_raw, lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)
-    # EPA ACRES
+    # EPA ACRES — include INTEREST_TYPE to confirm brownfield designation
     epa_raw = frs_spatial(FRS_ACRES, lat, lon, 0.5,
-        out_fields="PRIMARY_NAME,LATITUDE83,LONGITUDE83,ACTIVE_STATUS,LOCATION_ADDRESS,REGISTRY_ID")
+        out_fields="PRIMARY_NAME,LATITUDE83,LONGITUDE83,ACTIVE_STATUS,LOCATION_ADDRESS,REGISTRY_ID,INTEREST_TYPE,PGM_SYS_ACRNM")
     epa_sites = []
     for feat in epa_raw.get("features", []):
         attrs = feat.get("attributes", {})
         epa_sites.append({
-            "name":    attrs.get("PRIMARY_NAME"),
-            "address": attrs.get("LOCATION_ADDRESS"),
-            "status":  attrs.get("ACTIVE_STATUS"),
-            "registry_id": attrs.get("REGISTRY_ID"),
-            "lat":     attrs.get("LATITUDE83"),
-            "lon":     attrs.get("LONGITUDE83"),
+            "name":         attrs.get("PRIMARY_NAME"),
+            "address":      attrs.get("LOCATION_ADDRESS"),
+            "status":       attrs.get("ACTIVE_STATUS"),
+            "interest_type":attrs.get("INTEREST_TYPE"),
+            "program":      attrs.get("PGM_SYS_ACRNM"),
+            "registry_id":  attrs.get("REGISTRY_ID"),
+            "lat":          attrs.get("LATITUDE83"),
+            "lon":          attrs.get("LONGITUDE83"),
         })
     return jsonify({
         "fdep_raw_count": len(fdep_raw.get("features", [])),
