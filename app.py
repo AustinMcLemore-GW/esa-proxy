@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.28
+Phase I ESA Database Proxy — v9.29
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -438,7 +438,7 @@ def query():
 
     def get_haz():
         data = fdep_query(CHAZ, lat, lon, 0.5, out_fields="ME_NAME,FAC_INS_TYPE,GENERATOR,PERMITTED_CONSENTED")
-        sites = []
+        raw = []
         for feat in data.get("features", []):
             attrs = feat.get("attributes", {}); geom = feat.get("geometry", {})
             name = str(attrs.get("ME_NAME") or "Unknown"); dist = 999.0
@@ -447,8 +447,17 @@ def query():
                 except: pass
             gen = str(attrs.get("GENERATOR","") or ""); perm = str(attrs.get("PERMITTED_CONSENTED","") or "")
             nc = gen in {"LQG","SQG","VSQG"} or perm == "Y"
-            sites.append({"name": name, "distance": dist, "status": str(attrs.get("FAC_INS_TYPE","") or ""), "nc": nc})
-        sites.sort(key=lambda s: s["distance"])
+            raw.append({"name": name, "distance": dist, "status": str(attrs.get("FAC_INS_TYPE","") or ""), "nc": nc})
+        # Deduplicate by name — keep closest, upgrade to NC if any record is NC
+        seen = {}
+        for s in sorted(raw, key=lambda x: x["distance"]):
+            key = s["name"].strip().upper()
+            if key not in seen:
+                seen[key] = s
+            else:
+                if s["nc"]:
+                    seen[key]["nc"] = True
+        sites = sorted(seen.values(), key=lambda s: s["distance"])
         return {"count": len(sites), "sites": sites}
 
     def get_lust():
@@ -640,7 +649,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.28", "name": "Phase I ESA Proxy v9.28"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.29", "name": "Phase I ESA Proxy v9.29"})
 
 @app.route("/browndebug", methods=["GET"])
 def browndebug():
