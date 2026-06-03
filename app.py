@@ -22,13 +22,17 @@ def haversine(lat1, lon1, lat2, lon2):
     a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1))*math.cos(math.radians(lat2))*math.sin(dlon/2)**2
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
-def arcgis_query(url, lat, lon, radius_miles, where="1=1", out_fields="*"):
+def arcgis_query(url, lat, lon, radius_miles, where="1=1", out_fields="*", use_units=True):
+    """
+    Spatial query against ArcGIS REST layer.
+    use_units=True: sends units=esriSRUnit_Meter (works for FDEP layers)
+    use_units=False: omits units parameter (required for EPA FRS layers which use SR 4269)
+    """
     params = {
         "geometry":       f"{lon},{lat}",
         "geometryType":   "esriGeometryPoint",
         "spatialRel":     "esriSpatialRelIntersects",
         "distance":       radius_miles * 1609.34,
-        "units":          "esriSRUnit_Meter",
         "inSR":           "4326",
         "outSR":          "4326",
         "where":          where,
@@ -36,6 +40,8 @@ def arcgis_query(url, lat, lon, radius_miles, where="1=1", out_fields="*"):
         "returnGeometry": "true",
         "f":              "json",
     }
+    if use_units:
+        params["units"] = "esriSRUnit_Meter"
     try:
         r = requests.get(url, params=params, timeout=30)
         r.raise_for_status()
@@ -137,7 +143,8 @@ def frs_npl(lat, lon, radius_miles, status_filter=None):
     data = arcgis_query(
         "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/21/query",
         lat, lon, radius_miles,
-        out_fields="PRIMARY_NAME,NPL_STATUS_NAME,LATITUDE83,LONGITUDE83")
+        out_fields="PRIMARY_NAME,NPL_STATUS_NAME,LATITUDE83,LONGITUDE83",
+        use_units=False)
     sites = []
     for feat in data.get("features", []):
         attrs  = feat.get("attributes", {})
@@ -159,7 +166,8 @@ def fuds(lat, lon, radius_miles):
     data = arcgis_query(
         "https://services7.arcgis.com/n1YM8pTrFmm7L4hs/arcgis/rest/services/FUDS_Projects/FeatureServer/0/query",
         lat, lon, radius_miles,
-        out_fields="PROJECT_NAME,PROJECT_STATUS,LATITUDE,LONGITUDE")
+        out_fields="PROJECT_NAME,PROJECT_STATUS,LATITUDE,LONGITUDE",
+        use_units=False)
     sites = []
     for feat in data.get("features", []):
         attrs  = feat.get("attributes", {})
@@ -184,7 +192,8 @@ def cercla(lat, lon, radius_miles):
     data = arcgis_query(
         "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/21/query",
         lat, lon, radius_miles,
-        out_fields="PRIMARY_NAME,NPL_STATUS_NAME,LATITUDE83,LONGITUDE83")
+        out_fields="PRIMARY_NAME,NPL_STATUS_NAME,LATITUDE83,LONGITUDE83",
+        use_units=False)
     if "error" in data:
         return {"count": 0, "sites": [], "error": data["error"]}
     sites = []
@@ -304,7 +313,7 @@ def query():
         fdep_data  = arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=BROWN_WHERE, out_fields=DEP_FIELDS)
         fdep_sites = parse_features(fdep_data, lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)
         # EPA CIMC brownfields from ACRES (FRS_INTERESTS layer 0)
-        epa_data   = arcgis_query(EPA_BROWNFIELDS, lat, lon, 0.5, out_fields="PRIMARY_NAME,LATITUDE83,LONGITUDE83,SITE_STATUS")
+        epa_data   = arcgis_query(EPA_BROWNFIELDS, lat, lon, 0.5, out_fields="PRIMARY_NAME,LATITUDE83,LONGITUDE83,SITE_STATUS", use_units=False)
         epa_sites  = []
         for feat in epa_data.get("features", []):
             attrs = feat.get("attributes", {})
