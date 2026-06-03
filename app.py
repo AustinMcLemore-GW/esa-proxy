@@ -522,7 +522,7 @@ def query():
         filtered_epa = []
         for epa in epa_sites:
             close_to_fdep = any(
-                haversine(epa["_lat"], epa["_lon"], fc[0], fc[1]) < 0.15
+                haversine(epa["_lat"], epa["_lon"], fc[0], fc[1]) < 0.05
                 for fc in fdep_coords
             )
             if not close_to_fdep:
@@ -682,7 +682,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.36", "name": "Phase I ESA Proxy v9.36"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.37", "name": "Phase I ESA Proxy v9.37"})
 
 @app.route("/browndebug", methods=["GET"])
 def browndebug():
