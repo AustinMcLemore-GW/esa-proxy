@@ -491,5 +491,58 @@ def browndebug():
     })
 
 
+@app.route("/superdebug", methods=["GET"])
+def superdebug():
+    try:
+        lat = float(request.args.get("lat", 27.745717))
+        lon = float(request.args.get("lon", -82.68471))
+    except ValueError:
+        return jsonify({"error": "bad lat/lon"}), 400
+    # Layer 1 — dedicated FL Superfund layer
+    layer1_raw = fdep_query(FL_SUPERFUND, lat, lon, 1.0,
+        out_fields="BUSINESS_NAME,RSC2_REMEDIATION_STATUS_KEY,CLCC_CLEANUP_CATEGORY_KEY,SOURCE_DATABASE_NAME")
+    layer1_sites = []
+    for feat in layer1_raw.get("features", []):
+        attrs = feat.get("attributes", {})
+        geom  = feat.get("geometry", {})
+        dist  = 999.0
+        if geom and "x" in geom and "y" in geom:
+            try: dist = round(haversine(lat, lon, float(geom["y"]), float(geom["x"])), 2)
+            except: pass
+        layer1_sites.append({
+            "name":     attrs.get("BUSINESS_NAME"),
+            "status":   attrs.get("RSC2_REMEDIATION_STATUS_KEY"),
+            "category": attrs.get("CLCC_CLEANUP_CATEGORY_KEY"),
+            "source_db":attrs.get("SOURCE_DATABASE_NAME"),
+            "distance": dist,
+            "layer":    "MapServer/1 (FL Superfund)"
+        })
+    # Layer 0 — DEP Cleanup filtered to SUPER/OTHCU
+    layer0_raw = fdep_query(DEP_CLEANUP, lat, lon, 1.0, where=SUPER_WHERE,
+        out_fields="BUSINESS_NAME,RSC2_REMEDIATION_STATUS_KEY,CLCC_CLEANUP_CATEGORY_KEY,SOURCE_DATABASE_NAME")
+    layer0_sites = []
+    for feat in layer0_raw.get("features", []):
+        attrs = feat.get("attributes", {})
+        geom  = feat.get("geometry", {})
+        dist  = 999.0
+        if geom and "x" in geom and "y" in geom:
+            try: dist = round(haversine(lat, lon, float(geom["y"]), float(geom["x"])), 2)
+            except: pass
+        layer0_sites.append({
+            "name":     attrs.get("BUSINESS_NAME"),
+            "status":   attrs.get("RSC2_REMEDIATION_STATUS_KEY"),
+            "category": attrs.get("CLCC_CLEANUP_CATEGORY_KEY"),
+            "source_db":attrs.get("SOURCE_DATABASE_NAME"),
+            "distance": dist,
+            "layer":    "MapServer/0 (DEP Cleanup SUPER/OTHCU)"
+        })
+    return jsonify({
+        "layer1_count": len(layer1_sites),
+        "layer1_sites": sorted(layer1_sites, key=lambda x: x["distance"]),
+        "layer0_count": len(layer0_sites),
+        "layer0_sites": sorted(layer0_sites, key=lambda x: x["distance"]),
+    })
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
