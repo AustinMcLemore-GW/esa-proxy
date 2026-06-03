@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.16
+Phase I ESA Database Proxy — v9.17
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -613,7 +613,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.16", "name": "Phase I ESA Proxy v9.16"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.17", "name": "Phase I ESA Proxy v9.17"})
 
 @app.route("/browndebug", methods=["GET"])
 def browndebug():
