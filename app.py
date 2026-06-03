@@ -46,7 +46,7 @@ def fdep_query(url, lat, lon, radius_miles, where="1=1", out_fields="*"):
         "f":              "json",
     }
     try:
-        r = requests.get(url, params=params, timeout=30)
+        r = requests.get(url, params=params, timeout=20)
         r.raise_for_status()
         return r.json()
     except Exception as e:
@@ -58,7 +58,7 @@ def frs_query(url, where, out_fields):
         r = requests.get(url, params={
             "where": where, "outFields": out_fields,
             "returnGeometry": "false", "f": "json"
-        }, timeout=30)
+        }, timeout=20)
         r.raise_for_status()
         return r.json()
     except Exception as e:
@@ -79,7 +79,7 @@ def frs_spatial(url, lat, lon, radius_miles, out_fields="*"):
             "outFields":      out_fields,
             "returnGeometry": "false",
             "f":              "json",
-        }, timeout=30)
+        }, timeout=20)
         r.raise_for_status()
         return r.json()
     except Exception as e:
@@ -150,7 +150,7 @@ def echo_rcra(lat, lon, radius_miles, handler_types):
     try:
         r = requests.get("https://echodata.epa.gov/echo/rcra_rest_services.get_facility_info",
             params={"output":"JSON","p_lat":lat,"p_lon":lon,"p_radius_mi":radius_miles,
-                    "p_htype":handler_types,"qcolumns":"1,2,3,4,5,6,38,39,40"}, timeout=30)
+                    "p_htype":handler_types,"qcolumns":"1,2,3,4,5,6,38,39,40"}, timeout=20)
         r.raise_for_status()
         facilities = r.json().get("Results", {}).get("Facilities", [])
         sites = []
@@ -250,7 +250,7 @@ def erns(zipcode):
     if not zipcode:
         return {"count": 0, "sites": [], "note": "ZIP not provided"}
     try:
-        r = requests.get(f"https://data.epa.gov/efservice/ERNS_INCIDENTS/ZIP_CODE/{zipcode}/rows/0:100/JSON", timeout=30)
+        r = requests.get(f"https://data.epa.gov/efservice/ERNS_INCIDENTS/ZIP_CODE/{zipcode}/rows/0:100/JSON", timeout=20)
         r.raise_for_status()
         sites = [{"name": rec.get("FACILITY_NAME") or rec.get("COMPANY_NAME") or "ERNS Incident",
                   "distance": 0.0, "status": rec.get("INCIDENT_TYPE_DESCRIPTION","") or "", "nc": True}
@@ -365,14 +365,19 @@ def query():
         "erns":           lambda: erns(zipcode),
     }
 
-    with ThreadPoolExecutor(max_workers=16) as executor:
+    with ThreadPoolExecutor(max_workers=6) as executor:
         future_to_key = {executor.submit(fn): key for key, fn in task_map.items()}
-        for future in as_completed(future_to_key):
-            key = future_to_key[future]
-            try:
-                res[key] = future.result()
-            except Exception as e:
-                res[key] = {"count": 0, "sites": [], "error": str(e)}
+        try:
+            for future in as_completed(future_to_key, timeout=60):
+                key = future_to_key[future]
+                try:
+                    res[key] = future.result()
+                except Exception as e:
+                    res[key] = {"count": 0, "sites": [], "error": str(e)}
+        except Exception:
+            for future, key in future_to_key.items():
+                if key not in res:
+                    res[key] = {"count": 0, "sites": [], "error": "Query timed out"}
 
     return jsonify(res)
 
@@ -420,20 +425,20 @@ def rawdebug():
     url = FRS_SEMS
     # Test 1: minimal
     try:
-        r = requests.get(url, params={"where":"1=1","resultRecordCount":"1","f":"json"}, timeout=30)
+        r = requests.get(url, params={"where":"1=1","resultRecordCount":"1","f":"json"}, timeout=20)
         results["test1_minimal"] = {"status": r.status_code, "body": r.json()}
     except Exception as e:
         results["test1_minimal"] = {"error": str(e)}
     # Test 2: count only
     try:
-        r = requests.get(url, params={"where":"1=1","returnCountOnly":"true","f":"json"}, timeout=30)
+        r = requests.get(url, params={"where":"1=1","returnCountOnly":"true","f":"json"}, timeout=20)
         results["test2_count"] = {"status": r.status_code, "body": r.json()}
     except Exception as e:
         results["test2_count"] = {"error": str(e)}
     # Test 3: get all field names from layer
     try:
         r = requests.get("https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/21",
-            params={"f":"json"}, timeout=30)
+            params={"f":"json"}, timeout=20)
         data = r.json()
         fields = [f["name"] for f in data.get("fields", [])]
         results["test3_fields"] = {"status": r.status_code, "fields": fields}

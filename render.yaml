@@ -3,7 +3,7 @@ services:
     name: esa-proxy
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:10000 --timeout 120 --workers 2
+    startCommand: gunicorn app:app --bind 0.0.0.0:10000 --timeout 180 --workers 1 --graceful-timeout 30
     plan: free
     envVars:
       - key: PYTHON_VERSION
