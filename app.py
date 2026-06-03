@@ -37,7 +37,7 @@ def arcgis_query(url, lat, lon, radius_miles, where="1=1", out_fields="*"):
         "f":              "json",
     }
     try:
-        r = requests.get(url, params=params, timeout=15)
+        r = requests.get(url, params=params, timeout=30)
         r.raise_for_status()
         return r.json()
     except Exception as e:
@@ -113,7 +113,7 @@ def echo_rcra(lat, lon, radius_miles, handler_types):
             "https://echodata.epa.gov/echo/rcra_rest_services.get_facility_info",
             params={"output":"JSON","p_lat":lat,"p_lon":lon,
                     "p_radius_mi":radius_miles,"p_htype":handler_types,
-                    "qcolumns":"1,2,3,4,5,6,38,39,40"}, timeout=15)
+                    "qcolumns":"1,2,3,4,5,6,38,39,40"}, timeout=30)
         r.raise_for_status()
         facilities = r.json().get("Results", {}).get("Facilities", [])
         sites = []
@@ -201,7 +201,7 @@ def erns(zipcode):
     try:
         r = requests.get(
             f"https://data.epa.gov/efservice/ERNS_INCIDENTS/ZIP_CODE/{zipcode}/rows/0:100/JSON",
-            timeout=15)
+            timeout=30)
         r.raise_for_status()
         sites = [{"name": rec.get("FACILITY_NAME") or rec.get("COMPANY_NAME") or "ERNS Incident",
                   "distance": 0.0, "status": rec.get("INCIDENT_TYPE_DESCRIPTION","") or "", "nc": True}
@@ -293,7 +293,7 @@ def query():
         "rcra_tsd":       lambda: echo_rcra(lat, lon, 0.5, "TSD"),
         "haz":            get_haz,
         "cont":           lambda: (lambda p: {"count": len(p), "sites": p})(parse_features(arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=CONT_WHERE, out_fields=DEP_FIELDS), lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)),
-        "solid":          lambda: (lambda p: {"count": len(p), "sites": p})(parse_features(arcgis_query(SOLID_WASTE, lat, lon, 0.5, out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"), lat, lon, "FACILITY_NAME", "FACILITY_STATUS", {"Active","ACTIVE"})),
+        "solid":          lambda: (lambda p: {"count": len(p), "sites": p})(parse_features(arcgis_query(SOLID_WASTE, lat, lon, 0.5, where="FACILITY_STATUS NOT IN ('Closed','Inactive','CLOSED','INACTIVE')", out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"), lat, lon, "FACILITY_NAME", "FACILITY_STATUS", {"Active","ACTIVE","Open","OPEN","active","Active, No Gw Monitoring","Partially Closed"})),
         "lust":           get_lust,
         "vol":            lambda: (lambda p: {"count": len(p), "sites": p})(parse_features(arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=VOL_WHERE, out_fields=DEP_FIELDS), lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)),
         "brown":          lambda: (lambda p: {"count": len(p), "sites": p})(parse_features(arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=BROWN_WHERE, out_fields=DEP_FIELDS), lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)),
@@ -328,7 +328,7 @@ def debug():
         "chaz":          lambda: arcgis_query(CHAZ, lat, lon, 0.5, out_fields="ME_NAME,FAC_INS_TYPE,GENERATOR,PERMITTED_CONSENTED"),
         "stcm_lust":     lambda: arcgis_query(STCM_LUST, lat, lon, 0.5, out_fields="SITE_NAME,SITE_STATUS,DISCHARGE_DATE"),
         "stcm_tanks":    lambda: arcgis_query(STCM_TANKS, lat, lon, 0.15, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"),
-        "solid":         lambda: arcgis_query(SOLID_WASTE, lat, lon, 0.5, out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"),
+        "solid":         lambda: arcgis_query(SOLID_WASTE, lat, lon, 0.5, where="FACILITY_STATUS NOT IN ('Closed','Inactive','CLOSED','INACTIVE')", out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"),
         "ic":            lambda: arcgis_query(ICR, lat, lon, 0.05, out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE"),
         "dep_cont":      lambda: arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=CONT_WHERE, out_fields=DEP_FIELDS),
         "dep_lust":      lambda: arcgis_query(DEP_CLEANUP, lat, lon, 0.5, where=LUST_WHERE, out_fields=DEP_FIELDS),
