@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.18
+Phase I ESA Database Proxy — v9.19
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -613,7 +613,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.18", "name": "Phase I ESA Proxy v9.18"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.19", "name": "Phase I ESA Proxy v9.19"})
 
 @app.route("/browndebug", methods=["GET"])
 def browndebug():
@@ -705,36 +705,31 @@ def superdebug():
 
 @app.route("/fudsdebug", methods=["GET"])
 def fudsdebug():
-    url = "https://services7.arcgis.com/n1YM8pTrFmm7L4hs/arcgis/rest/services/FUDS_Projects/FeatureServer/0/query"
+    """Test multiple FUDS URL candidates to find the working one."""
     results = {}
-    # Test 1: get layer info/fields
-    try:
-        r = requests.get(
-            "https://services7.arcgis.com/n1YM8pTrFmm7L4hs/arcgis/rest/services/FUDS_Projects/FeatureServer/0",
-            params={"f":"json"}, timeout=15)
-        data = r.json()
-        results["fields"] = [f["name"] for f in data.get("fields", [])]
-        results["extent"] = data.get("extent")
-    except Exception as e:
-        results["fields_error"] = str(e)
-    # Test 2: minimal where=1=1 count
-    try:
-        r = requests.get(url, params={"where":"1=1","returnCountOnly":"true","f":"json"}, timeout=15)
-        results["count"] = r.json()
-    except Exception as e:
-        results["count_error"] = str(e)
-    # Test 3: state filter
-    try:
-        r = requests.get(url, params={"where":"STATE_CODE='FL'","returnCountOnly":"true","f":"json"}, timeout=15)
-        results["fl_count"] = r.json()
-    except Exception as e:
-        results["fl_count_error"] = str(e)
-    # Test 4: get one record to see field values
-    try:
-        r = requests.get(url, params={"where":"STATE_CODE='FL'","outFields":"*","resultRecordCount":"1","returnGeometry":"true","f":"json"}, timeout=15)
-        results["sample"] = r.json()
-    except Exception as e:
-        results["sample_error"] = str(e)
+    candidates = [
+        "https://services7.arcgis.com/n1YM8pTrFmm7L4hs/arcgis/rest/services/FUDS_Projects/FeatureServer/0",
+        "https://services.arcgis.com/bDAHNpRkWCVqeHGj/arcgis/rest/services/FUDS_FY24/FeatureServer/1",
+        "https://services1.arcgis.com/TpIAPBD8BmZKbmtL/arcgis/rest/services/FUDS_Public_Properties/FeatureServer/0",
+        "https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/US_FUDS_20230517/FeatureServer/0",
+        "https://geospatial.sec.usace.army.mil/arcgis/rest/services/FUDS/FUDS_Public/FeatureServer/1",
+    ]
+    for url in candidates:
+        key = url.split("/")[-3] + "/" + url.split("/")[-1]
+        try:
+            r = requests.get(url, params={"f":"json"}, timeout=10)
+            data = r.json()
+            if "fields" in data:
+                results[key] = {
+                    "status": "OK",
+                    "name": data.get("name"),
+                    "fields": [f["name"] for f in data.get("fields", [])[:10]],
+                    "url": url
+                }
+            else:
+                results[key] = {"status": "no fields", "response": str(data)[:200]}
+        except Exception as e:
+            results[key] = {"status": "error", "error": str(e)}
     return jsonify(results)
 
 
