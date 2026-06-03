@@ -182,8 +182,13 @@ SOLID_WASTE  = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/DWM_WAS
 ICR          = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/DWM_WASTE_ICR_BACKG/MapServer/12/query"
 
 # ── EPA FRS URLs ──────────────────────────────────────────────────────────────
-FRS_SEMS  = "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/21/query"
-FRS_ACRES = "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/0/query"
+FRS_SEMS      = "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/21/query"
+FRS_SEMS_NPL  = "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/22/query"
+FRS_ACRES     = "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/0/query"
+FRS_RCRA      = "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/15/query"
+FRS_RCRA_ACT  = "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/16/query"
+FRS_RCRA_LQG  = "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/18/query"
+FRS_RCRA_TSD  = "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/20/query"
 
 # ── DEP Cleanup field constants ───────────────────────────────────────────────
 DEP_FIELDS  = "BUSINESS_NAME,RSC2_REMEDIATION_STATUS_KEY,CLCC_CLEANUP_CATEGORY_KEY,SOURCE_DATABASE_NAME"
@@ -234,6 +239,64 @@ def echo_rcra(lat, lon, radius_miles, handler_types):
         except Exception as e:
             last_error = str(e)
     return {"count": 0, "sites": [], "error": f"Failed: {last_error}"}
+
+
+def frs_rcra_all(lat, lon):
+    """
+    Query RCRA facilities from EPA FRS — no rate limiting.
+    Uses FRS spatial layers which work reliably from cloud hosting IPs.
+    Returns CA (1mi), TSD (0.5mi), generators (0.05mi) — no compliance status.
+    """
+    fields = "PRIMARY_NAME,ACTIVE_STATUS,LATITUDE83,LONGITUDE83"
+
+    # CA facilities — layer 16 (active RCRA) filtered, within 1 mile
+    ca_data = frs_spatial(FRS_RCRA_ACT, lat, lon, 1.0, out_fields=fields)
+    ca_sites = []
+    for feat in ca_data.get("features", []):
+        attrs = feat.get("attributes", {})
+        flat = float(attrs.get("LATITUDE83", 0) or 0)
+        flon = float(attrs.get("LONGITUDE83", 0) or 0)
+        if not flat or not flon: continue
+        dist = haversine(lat, lon, flat, flon)
+        if dist > 1.0: continue
+        # FRS RCRA_ACTIVE layer — being listed here indicates active CA status
+        status = str(attrs.get("ACTIVE_STATUS","") or "")
+        ca_sites.append({"name": str(attrs.get("PRIMARY_NAME","Unknown")),
+                         "distance": round(dist,2), "status": status, "nc": True})
+
+    # TSD facilities — layer 20, within 0.5 miles
+    tsd_data = frs_spatial(FRS_RCRA_TSD, lat, lon, 0.5, out_fields=fields)
+    tsd_sites = []
+    for feat in tsd_data.get("features", []):
+        attrs = feat.get("attributes", {})
+        flat = float(attrs.get("LATITUDE83", 0) or 0)
+        flon = float(attrs.get("LONGITUDE83", 0) or 0)
+        if not flat or not flon: continue
+        dist = haversine(lat, lon, flat, flon)
+        if dist > 0.5: continue
+        status = str(attrs.get("ACTIVE_STATUS","") or "")
+        tsd_sites.append({"name": str(attrs.get("PRIMARY_NAME","Unknown")),
+                          "distance": round(dist,2), "status": status, "nc": False})
+
+    # LQG generators — layer 18, within 0.05 miles
+    gen_data = frs_spatial(FRS_RCRA_LQG, lat, lon, 0.05, out_fields=fields)
+    gen_sites = []
+    for feat in gen_data.get("features", []):
+        attrs = feat.get("attributes", {})
+        flat = float(attrs.get("LATITUDE83", 0) or 0)
+        flon = float(attrs.get("LONGITUDE83", 0) or 0)
+        if not flat or not flon: continue
+        dist = haversine(lat, lon, flat, flon)
+        if dist > 0.05: continue
+        status = str(attrs.get("ACTIVE_STATUS","") or "")
+        gen_sites.append({"name": str(attrs.get("PRIMARY_NAME","Unknown")),
+                          "distance": round(dist,2), "status": status, "nc": False})
+
+    return {
+        "ca":  {"count": len(ca_sites),  "sites": sorted(ca_sites,  key=lambda s: s["distance"])},
+        "tsd": {"count": len(tsd_sites), "sites": sorted(tsd_sites, key=lambda s: s["distance"])},
+        "gen": {"count": len(gen_sites), "sites": sorted(gen_sites, key=lambda s: s["distance"])},
+    }
 
 
 def echo_rcra_all(lat, lon):
@@ -332,18 +395,16 @@ def fuds(lat, lon, radius_miles):
 def frs_npl(lat, lon, radius_miles, status_filter=None):
     # INTEREST_TYPE values: "SUPERFUND NPL", "SUPERFUND (NON-NPL)"
     # ACTIVE_STATUS values: "NOT ON THE NPL", "DELETED FROM THE FINAL NPL", "CURRENTLY ON THE FINAL NPL" etc
-    data = frs_spatial(FRS_SEMS, lat, lon, radius_miles,
-        out_fields="PRIMARY_NAME,INTEREST_TYPE,ACTIVE_STATUS,LATITUDE83,LONGITUDE83")
+    # Use SEMS_NPL layer (22) — contains only NPL sites, no filtering needed
+    data = frs_spatial(FRS_SEMS_NPL, lat, lon, radius_miles,
+        out_fields="PRIMARY_NAME,ACTIVE_STATUS,LATITUDE83,LONGITUDE83")
     if "error" in data:
         return {"count": 0, "sites": [], "error": data["error"]}
     sites = []
     for feat in data.get("features", []):
         attrs = feat.get("attributes", {})
-        interest = str(attrs.get("INTEREST_TYPE","") or "")
         active   = str(attrs.get("ACTIVE_STATUS","") or "")
-        # Only include NPL sites
-        if interest != "SUPERFUND NPL":
-            continue
+        interest = "SUPERFUND NPL"  # layer 22 is NPL only
         flat = float(attrs.get("LATITUDE83", 0) or 0)
         flon = float(attrs.get("LONGITUDE83", 0) or 0)
         if not flat or not flon:
@@ -364,6 +425,7 @@ def frs_npl(lat, lon, radius_miles, status_filter=None):
 # ── CERCLA ────────────────────────────────────────────────────────────────────
 def cercla(lat, lon, radius_miles):
     # CERCLA non-NPL sites: INTEREST_TYPE = "SUPERFUND (NON-NPL)"
+    # SEMS layer 21 contains all SEMS sites — filter to non-NPL only
     data = frs_spatial(FRS_SEMS, lat, lon, radius_miles,
         out_fields="PRIMARY_NAME,INTEREST_TYPE,ACTIVE_STATUS,LATITUDE83,LONGITUDE83")
     if "error" in data:
@@ -373,8 +435,8 @@ def cercla(lat, lon, radius_miles):
         attrs    = feat.get("attributes", {})
         interest = str(attrs.get("INTEREST_TYPE","") or "")
         active   = str(attrs.get("ACTIVE_STATUS","") or "")
-        # Only non-NPL CERCLA/SEMS sites
-        if interest not in {"SUPERFUND (NON-NPL)","SUPERFUND NON-NPL","CERCLA"}:
+        # Only non-NPL CERCLA/SEMS sites (NPL sites are in layer 22 / frs_npl)
+        if interest not in {"SUPERFUND (NON-NPL)","SUPERFUND NON-NPL","CERCLA","NOT ON THE NPL"}:
             continue
         flat = float(attrs.get("LATITUDE83", 0) or 0)
         flon = float(attrs.get("LONGITUDE83", 0) or 0)
@@ -531,8 +593,13 @@ def query():
 
     def mk(fn): return lambda p: {"count": len(p), "sites": p}
 
-    # Single ECHO call for all RCRA types — avoids rate limiting
-    echo_results = echo_rcra_all(lat, lon)
+    # Try FRS RCRA first (no rate limiting), fall back to ECHO if FRS fails
+    frs_rcra_results = frs_rcra_all(lat, lon)
+    # Use FRS results if they returned without error, otherwise try ECHO
+    if any(frs_rcra_results[k].get("error") for k in ["ca","tsd","gen"]):
+        echo_results = echo_rcra_all(lat, lon)
+    else:
+        echo_results = frs_rcra_results
 
     task_map = {
         "npl":            lambda: frs_npl(lat, lon, 1.0, status_filter=["Currently on the Final NPL","Proposed for NPL"]),
@@ -676,7 +743,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.43", "name": "Phase I ESA Proxy v9.43"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.44", "name": "Phase I ESA Proxy v9.44"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
