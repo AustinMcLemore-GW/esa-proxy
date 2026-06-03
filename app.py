@@ -53,11 +53,32 @@ def fdep_query(url, lat, lon, radius_miles, where="1=1", out_fields="*"):
         return {"error": str(e), "features": []}
 
 def frs_query(url, where, out_fields):
-    """EPA FRS ArcGIS layers — use plain WHERE clause (no spatial params, geographic CRS)."""
+    """EPA FRS ArcGIS layers — plain WHERE clause, no spatial params."""
     try:
         r = requests.get(url, params={
             "where": where, "outFields": out_fields,
             "returnGeometry": "false", "f": "json"
+        }, timeout=30)
+        r.raise_for_status()
+        return r.json()
+    except Exception as e:
+        return {"error": str(e), "features": []}
+
+def frs_spatial(url, lat, lon, radius_miles, out_fields="*"):
+    """EPA FRS ArcGIS layers — envelope spatial query with correct xmin,ymin,xmax,ymax order."""
+    mn_lat, mx_lat, mn_lon, mx_lon = bbox(lat, lon, radius_miles)
+    # ArcGIS envelope: xmin,ymin,xmax,ymax (lon_min,lat_min,lon_max,lat_max)
+    envelope = f"{mn_lon},{mn_lat},{mx_lon},{mx_lat}"
+    try:
+        r = requests.get(url, params={
+            "geometry":       envelope,
+            "geometryType":   "esriGeometryEnvelope",
+            "spatialRel":     "esriSpatialRelIntersects",
+            "inSR":           "4269",
+            "outSR":          "4269",
+            "outFields":      out_fields,
+            "returnGeometry": "false",
+            "f":              "json",
         }, timeout=30)
         r.raise_for_status()
         return r.json()
@@ -165,29 +186,63 @@ def fuds(lat, lon, radius_miles):
 
 # ── FRS NPL ───────────────────────────────────────────────────────────────────
 def frs_npl(lat, lon, radius_miles, status_filter=None):
-    mn_lat, mx_lat, mn_lon, mx_lon = bbox(lat, lon, radius_miles)
-    where = f"LATITUDE83>={mn_lat} AND LATITUDE83<={mx_lat} AND LONGITUDE83>={mn_lon} AND LONGITUDE83<={mx_lon}"
-    data = frs_query(FRS_SEMS, where, "PRIMARY_NAME,NPL_STATUS_NAME,LATITUDE83,LONGITUDE83")
+    # INTEREST_TYPE values: "SUPERFUND NPL", "SUPERFUND (NON-NPL)"
+    # ACTIVE_STATUS values: "NOT ON THE NPL", "DELETED FROM THE FINAL NPL", "CURRENTLY ON THE FINAL NPL" etc
+    data = frs_spatial(FRS_SEMS, lat, lon, radius_miles,
+        out_fields="PRIMARY_NAME,INTEREST_TYPE,ACTIVE_STATUS,LATITUDE83,LONGITUDE83")
     if "error" in data:
         return {"count": 0, "sites": [], "error": data["error"]}
-    sites = parse_frs(data, lat, lon, "PRIMARY_NAME", "LATITUDE83", "LONGITUDE83", radius_miles,
-                      status_field="NPL_STATUS_NAME",
-                      nc_statuses={"Currently on the Final NPL","Proposed for NPL"})
-    if status_filter:
-        sites = [s for s in sites if s["status"] in status_filter]
+    sites = []
+    for feat in data.get("features", []):
+        attrs = feat.get("attributes", {})
+        interest = str(attrs.get("INTEREST_TYPE","") or "")
+        active   = str(attrs.get("ACTIVE_STATUS","") or "")
+        # Only include NPL sites
+        if interest != "SUPERFUND NPL":
+            continue
+        flat = float(attrs.get("LATITUDE83", 0) or 0)
+        flon = float(attrs.get("LONGITUDE83", 0) or 0)
+        if not flat or not flon:
+            continue
+        dist = haversine(lat, lon, flat, flon)
+        if dist > radius_miles:
+            continue
+        status = active
+        nc = active.upper() not in {"DELETED FROM THE FINAL NPL"}
+        # Apply status filter (for delisted query)
+        if status_filter and active not in status_filter:
+            continue
+        sites.append({"name": str(attrs.get("PRIMARY_NAME","Unknown")),
+                      "distance": round(dist,2), "status": status, "nc": nc})
+    sites.sort(key=lambda s: s["distance"])
     return {"count": len(sites), "sites": sites}
 
 # ── CERCLA ────────────────────────────────────────────────────────────────────
 def cercla(lat, lon, radius_miles):
-    mn_lat, mx_lat, mn_lon, mx_lon = bbox(lat, lon, radius_miles)
-    where = f"LATITUDE83>={mn_lat} AND LATITUDE83<={mx_lat} AND LONGITUDE83>={mn_lon} AND LONGITUDE83<={mx_lon}"
-    data = frs_query(FRS_SEMS, where, "PRIMARY_NAME,NPL_STATUS_NAME,LATITUDE83,LONGITUDE83")
+    # CERCLA non-NPL sites: INTEREST_TYPE = "SUPERFUND (NON-NPL)"
+    data = frs_spatial(FRS_SEMS, lat, lon, radius_miles,
+        out_fields="PRIMARY_NAME,INTEREST_TYPE,ACTIVE_STATUS,LATITUDE83,LONGITUDE83")
     if "error" in data:
         return {"count": 0, "sites": [], "error": data["error"]}
-    sites = parse_frs(data, lat, lon, "PRIMARY_NAME", "LATITUDE83", "LONGITUDE83", radius_miles,
-                      status_field="NPL_STATUS_NAME",
-                      nc_statuses={"Currently on the Final NPL","Proposed for NPL"},
-                      exclude_statuses={"Currently on the Final NPL","Proposed for NPL"})
+    sites = []
+    for feat in data.get("features", []):
+        attrs    = feat.get("attributes", {})
+        interest = str(attrs.get("INTEREST_TYPE","") or "")
+        active   = str(attrs.get("ACTIVE_STATUS","") or "")
+        # Only non-NPL CERCLA/SEMS sites
+        if interest not in {"SUPERFUND (NON-NPL)","SUPERFUND NON-NPL","CERCLA"}:
+            continue
+        flat = float(attrs.get("LATITUDE83", 0) or 0)
+        flon = float(attrs.get("LONGITUDE83", 0) or 0)
+        if not flat or not flon:
+            continue
+        dist = haversine(lat, lon, flat, flon)
+        if dist > radius_miles:
+            continue
+        nc = active.upper() not in {"ARCHIVED","INACTIVE","DELETED FROM THE FINAL NPL"}
+        sites.append({"name": str(attrs.get("PRIMARY_NAME","Unknown")),
+                      "distance": round(dist,2), "status": active, "nc": nc})
+    sites.sort(key=lambda s: s["distance"])
     return {"count": len(sites), "sites": sites}
 
 # ── ERNS ──────────────────────────────────────────────────────────────────────
@@ -231,7 +286,7 @@ def query():
         return {"count": len(out), "sites": out}
 
     def get_delisted():
-        r = frs_npl(lat, lon, 0.5, status_filter=["Deleted from the Final NPL"])
+        r = frs_npl(lat, lon, 0.5, status_filter=["DELETED FROM THE FINAL NPL"])
         for s in r.get("sites", []): s["nc"] = False
         return r
 
@@ -263,14 +318,13 @@ def query():
     def get_brownfields():
         fdep_sites = parse_fdep(fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=BROWN_WHERE, out_fields=DEP_FIELDS),
             lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)
-        mn_lat, mx_lat, mn_lon, mx_lon = bbox(lat, lon, 0.5)
-        where_b = f"LATITUDE83>={mn_lat} AND LATITUDE83<={mx_lat} AND LONGITUDE83>={mn_lon} AND LONGITUDE83<={mx_lon}"
-        epa_data = frs_query(FRS_ACRES, where_b, "PRIMARY_NAME,LATITUDE83,LONGITUDE83,SITE_STATUS")
+        epa_data = frs_spatial(FRS_ACRES, lat, lon, 0.5,
+            out_fields="PRIMARY_NAME,LATITUDE83,LONGITUDE83,ACTIVE_STATUS")
         epa_sites = parse_frs(epa_data, lat, lon, "PRIMARY_NAME", "LATITUDE83", "LONGITUDE83", 0.5,
-            status_field="SITE_STATUS",
+            status_field="ACTIVE_STATUS",
             nc_statuses=None)
         for s in epa_sites:
-            s["nc"] = s["status"].upper() not in {"COMPLETE","COMPLETED","DELETED","ARCHIVED"}
+            s["nc"] = s["status"].upper() not in {"COMPLETE","COMPLETED","DELETED","ARCHIVED","READY FOR ANTICIPATED USE"}
         seen = set(); out = []
         for s in sorted(fdep_sites+epa_sites, key=lambda x: x["distance"]):
             if s["name"] not in seen: seen.add(s["name"]); out.append(s)
@@ -372,22 +426,16 @@ def rawdebug():
         results["test3_fields"] = {"status": r.status_code, "fields": fields}
     except Exception as e:
         results["test3_fields"] = {"error": str(e)}
-    # Test 4: spatial query using geometry (the correct approach for this layer)
+    # Test 4: cercla function directly
     try:
-        r = requests.get(url, params={
-            "geometry": "-82.7,-82.6,27.7,27.8",
-            "geometryType": "esriGeometryEnvelope",
-            "spatialRel": "esriSpatialRelIntersects",
-            "inSR": "4269",
-            "outSR": "4269",
-            "outFields": "*",
-            "resultRecordCount": "3",
-            "returnGeometry": "false",
-            "f": "json"
-        }, timeout=30)
-        results["test4_envelope"] = {"status": r.status_code, "body": r.json()}
+        results["test4_cercla_fn"] = cercla(27.745717, -82.68471, 0.5)
     except Exception as e:
-        results["test4_envelope"] = {"error": str(e)}
+        results["test4_cercla_fn"] = {"error": str(e)}
+    # Test 5: npl function directly
+    try:
+        results["test5_npl_fn"] = frs_npl(27.745717, -82.68471, 1.0)
+    except Exception as e:
+        results["test5_npl_fn"] = {"error": str(e)}
     return jsonify(results)
 
 # ── Health ────────────────────────────────────────────────────────────────────
