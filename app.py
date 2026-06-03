@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.19
+Phase I ESA Database Proxy — v9.20
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -613,7 +613,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.19", "name": "Phase I ESA Proxy v9.19"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.20", "name": "Phase I ESA Proxy v9.20"})
 
 @app.route("/browndebug", methods=["GET"])
 def browndebug():
@@ -708,11 +708,17 @@ def fudsdebug():
     """Test multiple FUDS URL candidates to find the working one."""
     results = {}
     candidates = [
-        "https://services7.arcgis.com/n1YM8pTrFmm7L4hs/arcgis/rest/services/FUDS_Projects/FeatureServer/0",
-        "https://services.arcgis.com/bDAHNpRkWCVqeHGj/arcgis/rest/services/FUDS_FY24/FeatureServer/1",
-        "https://services1.arcgis.com/TpIAPBD8BmZKbmtL/arcgis/rest/services/FUDS_Public_Properties/FeatureServer/0",
-        "https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/US_FUDS_20230517/FeatureServer/0",
-        "https://geospatial.sec.usace.army.mil/arcgis/rest/services/FUDS/FUDS_Public/FeatureServer/1",
+        # NASA HIFLD mirror — property boundaries (polygon, use centroid_x/centroid_y)
+        "https://maps.nccs.nasa.gov/mapping/rest/services/hifld_open/government/FeatureServer/9",
+        # HIFLD geoplatform
+        "https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/FUDS_Public_Properties/FeatureServer/0",
+        # Alternate HIFLD
+        "https://services.arcgis.com/jIL9msH9OI208GCb/arcgis/rest/services/HIFLD/FeatureServer/48",
+        # USACE geospatial portal
+        "https://geospatial.sec.usace.army.mil/server/rest/services/FUDS/FUDS_Public_Property_Points/FeatureServer/0",
+        "https://geospatial.sec.usace.army.mil/server/rest/services/FUDS/FUDS_Projects/FeatureServer/0",
+        # ArcGIS Online hosted
+        "https://services2.arcgis.com/FiaFA0dzneARZCGJ/arcgis/rest/services/FUDS_Public_Property_Points/FeatureServer/0",
     ]
     for url in candidates:
         key = url.split("/")[-3] + "/" + url.split("/")[-1]
