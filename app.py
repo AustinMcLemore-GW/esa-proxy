@@ -25,23 +25,39 @@ def haversine(lat1, lon1, lat2, lon2):
 def arcgis_query(url, lat, lon, radius_miles, where="1=1", out_fields="*", use_units=True):
     """
     Spatial query against ArcGIS REST layer.
-    use_units=True: sends units=esriSRUnit_Meter (works for FDEP layers)
-    use_units=False: omits units parameter (required for EPA FRS layers which use SR 4269)
+    use_units=True:  point + distance + units (FDEP layers in projected CRS)
+    use_units=False: envelope bounding box (EPA FRS/FUDS layers in geographic CRS 4269/4326)
     """
-    params = {
-        "geometry":       f"{lon},{lat}",
-        "geometryType":   "esriGeometryPoint",
-        "spatialRel":     "esriSpatialRelIntersects",
-        "distance":       radius_miles * 1609.34,
-        "inSR":           "4326",
-        "outSR":          "4326",
-        "where":          where,
-        "outFields":      out_fields,
-        "returnGeometry": "true",
-        "f":              "json",
-    }
     if use_units:
-        params["units"] = "esriSRUnit_Meter"
+        params = {
+            "geometry":       f"{lon},{lat}",
+            "geometryType":   "esriGeometryPoint",
+            "spatialRel":     "esriSpatialRelIntersects",
+            "distance":       radius_miles * 1609.34,
+            "units":          "esriSRUnit_Meter",
+            "inSR":           "4326",
+            "outSR":          "4326",
+            "where":          where,
+            "outFields":      out_fields,
+            "returnGeometry": "true",
+            "f":              "json",
+        }
+    else:
+        # Convert radius to degrees (approx: 1 mile ~ 0.01449 degrees lat, lon varies by lat)
+        deg_lat = radius_miles / 69.0
+        deg_lon = radius_miles / (69.0 * math.cos(math.radians(lat)))
+        envelope = f"{lon - deg_lon},{lat - deg_lat},{lon + deg_lon},{lat + deg_lat}"
+        params = {
+            "geometry":       envelope,
+            "geometryType":   "esriGeometryEnvelope",
+            "spatialRel":     "esriSpatialRelIntersects",
+            "inSR":           "4326",
+            "outSR":          "4326",
+            "where":          where,
+            "outFields":      out_fields,
+            "returnGeometry": "true",
+            "f":              "json",
+        }
     try:
         r = requests.get(url, params=params, timeout=30)
         r.raise_for_status()
