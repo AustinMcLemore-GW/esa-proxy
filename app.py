@@ -416,7 +416,33 @@ def debug():
 
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "8b"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "8k"})
+
+
+@app.route("/rawdebug", methods=["GET"])
+def rawdebug():
+    try:
+        lat = float(request.args.get("lat", 27.745717))
+        lon = float(request.args.get("lon", -82.68471))
+        radius_miles = float(request.args.get("r", 0.5))
+        params = {
+            "geometry":       f"{lon},{lat}",
+            "geometryType":   "esriGeometryPoint",
+            "spatialRel":     "esriSpatialRelIntersects",
+            "distance":       radius_miles * 1609.34,
+            "units":          "esriSRUnit_Meter",
+            "inSR":           "4269",
+            "outSR":          "4326",
+            "where":          "1=1",
+            "outFields":      "PRIMARY_NAME,NPL_STATUS_NAME,LATITUDE83,LONGITUDE83",
+            "returnGeometry": "false",
+            "f":              "json",
+        }
+        url = "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/21/query"
+        r = requests.get(url, params=params, timeout=30)
+        return jsonify({"status_code": r.status_code, "url_called": r.url, "response": r.json()})
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 
 if __name__ == "__main__":
