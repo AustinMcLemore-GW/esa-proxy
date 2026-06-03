@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.33
+Phase I ESA Database Proxy — v9.35
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -477,8 +477,11 @@ def query():
         return {"count": len(all_sites), "sites": all_sites}
 
     def get_brownfields():
-        fdep_sites = parse_fdep(fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=BROWN_WHERE, out_fields=DEP_FIELDS),
-            lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)
+        fdep_raw_brown = fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=BROWN_WHERE, out_fields=DEP_FIELDS)
+        fdep_sites = parse_fdep(fdep_raw_brown, lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)
+        fdep_coords = [(float(f["geometry"]["y"]), float(f["geometry"]["x"]))
+                       for f in fdep_raw_brown.get("features", [])
+                       if f.get("geometry") and "x" in f["geometry"]]
         epa_data = frs_spatial(FRS_ACRES, lat, lon, 0.5,
             out_fields="PRIMARY_NAME,LATITUDE83,LONGITUDE83,ACTIVE_STATUS,INTEREST_TYPE,REGISTRY_ID")
         # Only include confirmed brownfield properties from ACRES
@@ -507,20 +510,14 @@ def query():
             epa_sites.append({"name": str(attrs.get("PRIMARY_NAME","Unknown")),
                               "distance": round(dist,2), "status": str(attrs.get("ACTIVE_STATUS","") or ""),
                               "nc": nc, "_lat": flat, "_lon": flon})
-        # Drop EPA sites that are within 0.1 miles of an FDEP site (same physical location)
+        # Drop EPA ACRES sites that are within 0.05 miles of any FDEP brownfield site
+        # (same physical location reported by two different databases)
         filtered_epa = []
         for epa in epa_sites:
-            too_close = any(haversine(epa["_lat"], epa["_lon"], s["distance"], 0) < 0.1
-                           for s in fdep_sites) if fdep_sites else False
-            # Better proximity check using actual coords
-            close_to_fdep = False
-            for fdep_s in fdep_sites:
-                # Re-fetch fdep coords from geometry isn't available here so use distance proxy
-                # If EPA site is within 0.05 miles of search point AND FDEP also has a site
-                # within 0.05 miles — likely same site. Use name similarity as backup.
-                if abs(epa["distance"] - fdep_s["distance"]) < 0.05:
-                    close_to_fdep = True
-                    break
+            close_to_fdep = any(
+                haversine(epa["_lat"], epa["_lon"], fc[0], fc[1]) < 0.05
+                for fc in fdep_coords
+            )
             if not close_to_fdep:
                 filtered_epa.append(epa)
         # Remove internal coords before returning
@@ -678,7 +675,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.33", "name": "Phase I ESA Proxy v9.33"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.35", "name": "Phase I ESA Proxy v9.35"})
 
 @app.route("/browndebug", methods=["GET"])
 def browndebug():
