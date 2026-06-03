@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.17
+Phase I ESA Database Proxy — v9.18
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -613,7 +613,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.17", "name": "Phase I ESA Proxy v9.17"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.18", "name": "Phase I ESA Proxy v9.18"})
 
 @app.route("/browndebug", methods=["GET"])
 def browndebug():
@@ -701,6 +701,41 @@ def superdebug():
         "layer0_count": len(layer0_sites),
         "layer0_sites": sorted(layer0_sites, key=lambda x: x["distance"]),
     })
+
+
+@app.route("/fudsdebug", methods=["GET"])
+def fudsdebug():
+    url = "https://services7.arcgis.com/n1YM8pTrFmm7L4hs/arcgis/rest/services/FUDS_Projects/FeatureServer/0/query"
+    results = {}
+    # Test 1: get layer info/fields
+    try:
+        r = requests.get(
+            "https://services7.arcgis.com/n1YM8pTrFmm7L4hs/arcgis/rest/services/FUDS_Projects/FeatureServer/0",
+            params={"f":"json"}, timeout=15)
+        data = r.json()
+        results["fields"] = [f["name"] for f in data.get("fields", [])]
+        results["extent"] = data.get("extent")
+    except Exception as e:
+        results["fields_error"] = str(e)
+    # Test 2: minimal where=1=1 count
+    try:
+        r = requests.get(url, params={"where":"1=1","returnCountOnly":"true","f":"json"}, timeout=15)
+        results["count"] = r.json()
+    except Exception as e:
+        results["count_error"] = str(e)
+    # Test 3: state filter
+    try:
+        r = requests.get(url, params={"where":"STATE_CODE='FL'","returnCountOnly":"true","f":"json"}, timeout=15)
+        results["fl_count"] = r.json()
+    except Exception as e:
+        results["fl_count_error"] = str(e)
+    # Test 4: get one record to see field values
+    try:
+        r = requests.get(url, params={"where":"STATE_CODE='FL'","outFields":"*","resultRecordCount":"1","returnGeometry":"true","f":"json"}, timeout=15)
+        results["sample"] = r.json()
+    except Exception as e:
+        results["sample_error"] = str(e)
+    return jsonify(results)
 
 
 if __name__ == "__main__":
