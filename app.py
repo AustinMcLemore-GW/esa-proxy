@@ -510,6 +510,15 @@ def query():
             epa_sites.append({"name": str(attrs.get("PRIMARY_NAME","Unknown")),
                               "distance": round(dist,2), "status": str(attrs.get("ACTIVE_STATUS","") or ""),
                               "nc": nc, "_lat": flat, "_lon": flon})
+        # Drop EPA ACRES sites within 0.12 miles of an FDEP brownfield (same physical site)
+        filtered_epa = []
+        for epa in epa_sites:
+            close_to_fdep = any(
+                haversine(epa["_lat"], epa["_lon"], fc[0], fc[1]) < 0.12
+                for fc in fdep_coords
+            )
+            if not close_to_fdep:
+                filtered_epa.append(epa)
         # Drop EPA ACRES sites that are within 0.15 miles of any FDEP brownfield site
         # (same physical location reported by two different databases)
         # Re-fetch FDEP coords from geometry
@@ -682,7 +691,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.37", "name": "Phase I ESA Proxy v9.37"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.39", "name": "Phase I ESA Proxy v9.39"})
 
 @app.route("/browndebug", methods=["GET"])
 def browndebug():
