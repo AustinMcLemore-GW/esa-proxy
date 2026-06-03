@@ -43,15 +43,14 @@ def arcgis_query(url, lat, lon, radius_miles, where="1=1", out_fields="*", use_u
             "f":              "json",
         }
     else:
-        # Convert radius to degrees (approx: 1 mile ~ 0.01449 degrees lat, lon varies by lat)
-        deg_lat = radius_miles / 69.0
-        deg_lon = radius_miles / (69.0 * math.cos(math.radians(lat)))
-        envelope = f"{lon - deg_lon},{lat - deg_lat},{lon + deg_lon},{lat + deg_lat}"
+        # EPA FRS layers use SR 4269 (NAD83) — send inSR=4269 with meter units
         params = {
-            "geometry":       envelope,
-            "geometryType":   "esriGeometryEnvelope",
+            "geometry":       f"{lon},{lat}",
+            "geometryType":   "esriGeometryPoint",
             "spatialRel":     "esriSpatialRelIntersects",
-            "inSR":           "4326",
+            "distance":       radius_miles * 1609.34,
+            "units":          "esriSRUnit_Meter",
+            "inSR":           "4269",
             "outSR":          "4326",
             "where":          where,
             "outFields":      out_fields,
