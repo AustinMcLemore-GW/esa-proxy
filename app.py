@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.63
+Phase I ESA Database Proxy — v9.64
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -814,133 +814,51 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.63", "name": "Phase I ESA Proxy v9.63"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.64", "name": "Phase I ESA Proxy v9.64"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
-    """Test ECHO GeoServer RCRA universe values in search area."""
-    lat = float(request.args.get("lat", 27.808116))
-    lon = float(request.args.get("lon", -82.665444))
+    """Test ECHO GeoServer RCR_STATUS values to find CA facilities."""
+    lat = float(request.args.get("lat", 27.793096))
+    lon = float(request.args.get("lon", -82.671942))
     results = {}
-    base = "https://services.arcgis.com/cJ9YHowT8TU7DUyn/arcgis/rest/services/NationalRCRABoundaries/FeatureServer/1/query"
     mn_lat, mx_lat, mn_lon, mx_lon = bbox(lat, lon, 1.0)
+    envelope = f"{mn_lon},{mn_lat},{mx_lon},{mx_lat}"
 
-    # Test 1: envelope spatial query with FL filter
+    # Get all RCRA facilities with RCR_STATUS field
     try:
-        r = requests.get(base, params={
-            "geometry": f"{mn_lon},{mn_lat},{mx_lon},{mx_lat}",
-            "geometryType": "esriGeometryEnvelope",
+        r = requests.get(ECHOGEO_RCRA, params={
+            "geometry": envelope, "geometryType": "esriGeometryEnvelope",
             "spatialRel": "esriSpatialRelIntersects",
             "inSR": "4326", "outSR": "4326",
-            "where": "LOCATION_STATE='FL'",
-            "outFields": "HANDLER_ID,HANDLER_NAME,LOCATION_CITY,LOCATION_STATE",
+            "where": "RCR_STATE='FL'",
+            "outFields": "RCR_NAME,FAC_LAT,FAC_LONG,RCRA_UNIVERSE,RCR_STATUS,RCRA_CURR_COMPL_STATUS,RCRA_IDS",
             "returnGeometry": "false", "f": "json"
-        }, timeout=15)
-        data = r.json()
-        results["envelope_with_fl"] = {
-            "status": r.status_code,
-            "count": len(data.get("features",[])),
-            "error": data.get("error"),
-            "sites": [f["attributes"] for f in data.get("features",[])]
-        }
-    except Exception as e:
-        results["envelope_with_fl"] = {"error": str(e)}
-
-    # Test 2: envelope spatial query NO state filter
-    try:
-        r = requests.get(base, params={
-            "geometry": f"{mn_lon},{mn_lat},{mx_lon},{mx_lat}",
-            "geometryType": "esriGeometryEnvelope",
-            "spatialRel": "esriSpatialRelIntersects",
-            "inSR": "4326", "outSR": "4326",
-            "outFields": "HANDLER_ID,HANDLER_NAME,LOCATION_CITY,LOCATION_STATE",
-            "returnGeometry": "false", "f": "json"
-        }, timeout=15)
-        data = r.json()
-        results["envelope_no_filter"] = {
-            "status": r.status_code,
-            "count": len(data.get("features",[])),
-            "error": data.get("error"),
-            "sites": [f["attributes"] for f in data.get("features",[])]
-        }
-    except Exception as e:
-        results["envelope_no_filter"] = {"error": str(e)}
-
-    # Test 3: FL facilities WITH geometry to check coordinates
-    try:
-        r = requests.get(base, params={
-            "where": "LOCATION_STATE='FL'",
-            "resultRecordCount": "3",
-            "outFields": "HANDLER_ID,HANDLER_NAME,LOCATION_CITY,LOCATION_STATE",
-            "returnGeometry": "true",
-            "outSR": "4326",
-            "f": "json"
-        }, timeout=15)
-        data = r.json()
-        # Extract centroid of each polygon
-        samples = []
-        for feat in data.get("features", []):
-            attrs = feat.get("attributes", {})
-            geom = feat.get("geometry", {})
-            rings = geom.get("rings", []) if geom else []
-            centroid = None
-            if rings and rings[0]:
-                pts = rings[0]
-                centroid = [sum(p[0] for p in pts)/len(pts), sum(p[1] for p in pts)/len(pts)]
-            samples.append({"name": attrs.get("HANDLER_NAME"), "city": attrs.get("LOCATION_CITY"),
-                           "centroid": centroid, "has_geometry": bool(rings)})
-        results["fl_with_geometry"] = {
-            "count": len(data.get("features",[])),
-            "error": data.get("error"),
-            "samples": samples
-        }
-    except Exception as e:
-        results["fl_with_geometry"] = {"error": str(e)}
-
-    # Test 4: ECHO GeoServer RCRA layer
-    try:
-        r = requests.get(
-            "https://echogeo.epa.gov/arcgis/rest/services/ECHO/Facilities/MapServer/3",
-            params={"f": "json"}, timeout=15)
-        data = r.json()
-        results["echogeo_layer_info"] = {
-            "name": data.get("name"),
-            "fields": [f["name"] for f in data.get("fields",[])[:15]],
-            "extent": str(data.get("extent",""))[:100]
-        }
-    except Exception as e:
-        results["echogeo_layer_info"] = {"error": str(e)}
-
-    # Test: get all RCRA universe values in area
-    try:
-        r = requests.get(
-            "https://echogeo.epa.gov/arcgis/rest/services/ECHO/Facilities/MapServer/3/query",
-            params={
-                "geometry": f"{mn_lon},{mn_lat},{mx_lon},{mx_lat}",
-                "geometryType": "esriGeometryEnvelope",
-                "spatialRel": "esriSpatialRelIntersects",
-                "inSR": "4326", "outSR": "4326",
-                "where": "RCR_STATE='FL'",
-                "outFields": "RCR_NAME,FAC_LAT,FAC_LONG,RCRA_UNIVERSE,RCRA_CURR_COMPL_STATUS,RCRA_IDS",
-                "returnGeometry": "false", "f": "json"
-            }, timeout=15)
+        }, timeout=20)
         data = r.json()
         features = data.get("features", [])
-        universes = {}
+        # Show all unique RCR_STATUS values and flag any with A
+        status_values = {}
+        ca_candidates = []
         for f in features:
-            u = f["attributes"].get("RCRA_UNIVERSE","unknown")
-            universes[u] = universes.get(u, 0) + 1
-        results["echogeo_universes"] = {
-            "total": len(features),
-            "universe_counts": universes,
-            "all_sites": [{"name": f["attributes"].get("RCR_NAME"),
-                           "universe": f["attributes"].get("RCRA_UNIVERSE"),
-                           "compliance": f["attributes"].get("RCRA_CURR_COMPL_STATUS"),
-                           "rcra_ids": f["attributes"].get("RCRA_IDS")}
-                          for f in features]
-        }
+            attrs = f["attributes"]
+            rcr_s = str(attrs.get("RCR_STATUS","") or "")
+            status_values[rcr_s] = status_values.get(rcr_s, 0) + 1
+            # Check for A flag
+            if "(A" in rcr_s or " A)" in rcr_s or rcr_s == "A":
+                ca_candidates.append({
+                    "name": attrs.get("RCR_NAME"),
+                    "rcr_status": rcr_s,
+                    "universe": attrs.get("RCRA_UNIVERSE"),
+                    "compliance": attrs.get("RCRA_CURR_COMPL_STATUS"),
+                    "rcra_ids": attrs.get("RCRA_IDS")
+                })
+        results["total_facilities"] = len(features)
+        results["rcr_status_values"] = status_values
+        results["ca_candidates"] = ca_candidates
+        results["echogeo_error"] = data.get("error")
     except Exception as e:
-        results["echogeo_universes"] = {"error": str(e)}
+        results["error"] = str(e)
 
     return jsonify(results)
 
