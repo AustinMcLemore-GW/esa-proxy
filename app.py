@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.55
+Phase I ESA Database Proxy — v9.56
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -783,7 +783,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.55", "name": "Phase I ESA Proxy v9.55"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.56", "name": "Phase I ESA Proxy v9.56"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
@@ -835,23 +835,36 @@ def rcrtest():
     except Exception as e:
         results["envelope_no_filter"] = {"error": str(e)}
 
-    # Test 3: FL state filter only, no spatial
+    # Test 3: FL facilities WITH geometry to check coordinates
     try:
         r = requests.get(base, params={
             "where": "LOCATION_STATE='FL'",
-            "resultRecordCount": "5",
+            "resultRecordCount": "3",
             "outFields": "HANDLER_ID,HANDLER_NAME,LOCATION_CITY,LOCATION_STATE",
-            "returnGeometry": "false", "f": "json"
+            "returnGeometry": "true",
+            "outSR": "4326",
+            "f": "json"
         }, timeout=15)
         data = r.json()
-        results["fl_only_no_spatial"] = {
-            "status": r.status_code,
+        # Extract centroid of each polygon
+        samples = []
+        for feat in data.get("features", []):
+            attrs = feat.get("attributes", {})
+            geom = feat.get("geometry", {})
+            rings = geom.get("rings", []) if geom else []
+            centroid = None
+            if rings and rings[0]:
+                pts = rings[0]
+                centroid = [sum(p[0] for p in pts)/len(pts), sum(p[1] for p in pts)/len(pts)]
+            samples.append({"name": attrs.get("HANDLER_NAME"), "city": attrs.get("LOCATION_CITY"),
+                           "centroid": centroid, "has_geometry": bool(rings)})
+        results["fl_with_geometry"] = {
             "count": len(data.get("features",[])),
             "error": data.get("error"),
-            "sample": data.get("features",[{}])[0].get("attributes",{}) if data.get("features") else None
+            "samples": samples
         }
     except Exception as e:
-        results["fl_only_no_spatial"] = {"error": str(e)}
+        results["fl_with_geometry"] = {"error": str(e)}
 
     # Test 4: run cimc_rcra_ca function directly
     try:
