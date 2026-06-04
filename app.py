@@ -725,74 +725,62 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.47", "name": "Phase I ESA Proxy v9.47"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.48", "name": "Phase I ESA Proxy v9.48"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
-    """Test alternative RCRA/NPL endpoints."""
+    """Test FRS RCRA layers directly."""
     lat = float(request.args.get("lat", 27.892213))
     lon = float(request.args.get("lon", -82.715845))
     results = {}
-    mn_lat, mx_lat, mn_lon, mx_lon = bbox(lat, lon, 1.0)
+    fields = "PRIMARY_NAME,ACTIVE_STATUS,LATITUDE83,LONGITUDE83,REGISTRY_ID"
 
-    # Test 1: Envirofacts correct table name rcra_handler (lowercase)
+    # Test FRS layer 15 — all RCRA facilities
     try:
-        url = f"https://data.epa.gov/efservice/rcra_handler/state_code/FL/rows/0:5/JSON"
-        r = requests.get(url, timeout=15)
-        results["envirofacts_rcra_handler"] = {"status": r.status_code, "sample": str(r.text[:400])}
-    except Exception as e:
-        results["envirofacts_rcra_handler"] = {"error": str(e)}
-
-    # Test 2: FRS layer 4 info — get field names
-    try:
-        r = requests.get(
-            "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/4",
-            params={"f":"json"}, timeout=15)
-        data = r.json()
-        results["frs_layer4_info"] = {
-            "name": data.get("name"),
-            "fields": [f["name"] for f in data.get("fields",[])[:15]]
+        data = frs_spatial(FRS_RCRA, lat, lon, 1.0, out_fields=fields)
+        results["frs_layer15_rcra"] = {
+            "count": len(data.get("features",[])),
+            "error": data.get("error"),
+            "sites": [f["attributes"] for f in data.get("features",[])[:10]]
         }
     except Exception as e:
-        results["frs_layer4_info"] = {"error": str(e)}
+        results["frs_layer15_rcra"] = {"error": str(e)}
 
-    # Test 3: FRS layer 4 sample record
+    # Test FRS layer 16 — active RCRA
     try:
-        data = frs_spatial(
-            "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/4/query",
-            lat, lon, 1.0, out_fields="*")
-        results["frs_layer4_sample"] = {
-            "features": len(data.get("features",[])),
-            "first": data.get("features",[{}])[0].get("attributes",{}) if data.get("features") else None,
-            "error": data.get("error")
+        data = frs_spatial(FRS_RCRA_ACT, lat, lon, 1.0, out_fields=fields)
+        results["frs_layer16_active"] = {
+            "count": len(data.get("features",[])),
+            "error": data.get("error"),
+            "sites": [f["attributes"] for f in data.get("features",[])[:10]]
         }
     except Exception as e:
-        results["frs_layer4_sample"] = {"error": str(e)}
+        results["frs_layer16_active"] = {"error": str(e)}
 
-    # Test 4: FRS layers list to find RCRA layer
+    # Test FRS layer 20 — TSD
     try:
-        r = requests.get(
-            "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer",
-            params={"f":"json"}, timeout=15)
-        data = r.json()
-        results["frs_all_layers"] = [{"id": l["id"], "name": l["name"]}
-                                      for l in data.get("layers",[])]
+        data = frs_spatial(FRS_RCRA_TSD, lat, lon, 1.0, out_fields=fields)
+        results["frs_layer20_tsd"] = {
+            "count": len(data.get("features",[])),
+            "error": data.get("error"),
+            "sites": [f["attributes"] for f in data.get("features",[])[:10]]
+        }
     except Exception as e:
-        results["frs_all_layers"] = {"error": str(e)}
+        results["frs_layer20_tsd"] = {"error": str(e)}
 
-    # Test 5: ECHO with no handler type filter — get all RCRA facilities
+    # Test ECHO all RCRA no filter
     try:
         r = requests.get("https://echodata.epa.gov/echo/rcra_rest_services.get_facility_info", params={
             "output": "JSON", "p_lat": lat, "p_lon": lon, "p_radius_mi": 1.0,
-            "qcolumns": "1,2,3,4,5,6,38,39,40,41,42"
+            "qcolumns": "1,2,3,4,5,6,38,39,40,41"
         }, timeout=15)
         data = r.json()
         facilities = data.get("Results", {}).get("Facilities", [])
         results["echo_all_rcra"] = {
             "status": r.status_code,
             "count": len(facilities),
-            "facilities": [{"name": f.get("FacName"), "htype": f.get("RCRAHandlerType"),
-                           "compliance": f.get("RCRAComplianceStatus")} for f in facilities[:10]]
+            "sites": [{"name": f.get("FacName"), "htype": f.get("RCRAHandlerType"),
+                       "compliance": f.get("RCRAComplianceStatus")} for f in facilities[:10]]
         }
     except Exception as e:
         results["echo_all_rcra"] = {"error": str(e)}
