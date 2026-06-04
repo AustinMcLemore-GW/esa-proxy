@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.72
+Phase I ESA Database Proxy — v9.73
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -28,10 +28,13 @@ except Exception as _e:
 
 try:
     with open(_RCRA_CA_FILE) as _f:
-        RCRA_CA_DATA = json.load(_f)
-    print(f"Loaded {len(RCRA_CA_DATA)} FL RCRA CA facilities")
+        _rcra_ca_raw = json.load(_f)
+    RCRA_CA_DATA         = _rcra_ca_raw.get("facilities", _rcra_ca_raw if isinstance(_rcra_ca_raw, list) else [])
+    RCRA_CA_DOWNLOAD_DATE = _rcra_ca_raw.get("download_date", "unknown")
+    print(f"Loaded {len(RCRA_CA_DATA)} FL RCRA CA facilities (downloaded {RCRA_CA_DOWNLOAD_DATE})")
 except Exception as _e:
     RCRA_CA_DATA = []
+    RCRA_CA_DOWNLOAD_DATE = "unknown"
     print(f"Warning: could not load rcra_ca_florida.json: {_e}")
 
 app = Flask(__name__, static_folder='.', static_url_path='')
@@ -889,7 +892,25 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.72", "name": "Phase I ESA Proxy v9.72"})
+    import datetime
+    try:
+        dl_date = datetime.date.fromisoformat(RCRA_CA_DOWNLOAD_DATE)
+        age_days = (datetime.date.today() - dl_date).days
+        ca_warning = f"RCRA CA data is {age_days} days old (downloaded {RCRA_CA_DOWNLOAD_DATE})"
+        if age_days > 90:
+            ca_warning += " — UPDATE RECOMMENDED (quarterly refresh suggested)"
+    except:
+        ca_warning = f"RCRA CA download date unknown"
+    return jsonify({
+        "status": "ok",
+        "service": "Phase I ESA Proxy",
+        "version": "9.73",
+        "name": "Phase I ESA Proxy v9.73",
+        "rcra_ca_facilities": len(RCRA_CA_DATA),
+        "rcra_ca_status": ca_warning,
+        "fuds_fy": FUDS_FY,
+        "fuds_sites": len(FUDS_SITES)
+    })
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
