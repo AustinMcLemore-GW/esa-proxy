@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.59
+Phase I ESA Database Proxy — v9.60
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -208,8 +208,11 @@ ERIC_NC = {"OPEN","ONHOLD","INPROCESS"}  # CLOSED and CLOSEDWCOND = complete; ON
 
 # ── EPA ECHO RCRA ─────────────────────────────────────────────────────────────
 def echo_rcra(lat, lon, radius_miles, handler_types):
-    """Query EPA ECHO RCRA facilities. Uses ECHO get_facilities for broader compatibility."""
-    url = "https://echodata.epa.gov/echo/rcra_rest_services.get_facility_info"
+    """Query EPA ECHO RCRA facilities. Tries multiple endpoints to avoid rate limiting."""
+    endpoints = [
+        "https://echodata.epa.gov/echo/rcra_rest_services.get_facility_info",
+        "https://echo.epa.gov/echo/rcra_rest_services.get_facility_info",
+    ]
     params = {
         "output":      "JSON",
         "p_lat":       lat,
@@ -218,30 +221,36 @@ def echo_rcra(lat, lon, radius_miles, handler_types):
         "p_htype":     handler_types,
         "qcolumns":    "1,2,3,4,5,6,38,39,40",
     }
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "application/json",
+        "Referer": "https://echo.epa.gov/",
+    }
     last_error = "Unknown error"
-    for attempt in range(2):
-        try:
-            if attempt > 0:
-                time.sleep(2)
-            r = requests.get(url, params=params, timeout=15)
-            if r.status_code == 429:
-                last_error = "Rate limited (429)"
-                time.sleep(3)
-                continue
-            r.raise_for_status()
-            facilities = r.json().get("Results", {}).get("Facilities", [])
-            sites = []
-            for f in facilities:
-                flat = float(f.get("FacLat", 0) or 0)
-                flon = float(f.get("FacLong", 0) or 0)
-                dist = round(haversine(lat, lon, flat, flon), 2) if flat else 999.0
-                status = f.get("RCRAComplianceStatus", "") or ""
-                nc = "CA" in handler_types and status not in ["No Violation Identified", ""]
-                sites.append({"name": f.get("FacName","Unknown"), "distance": dist, "status": status, "nc": nc})
-            sites.sort(key=lambda s: s["distance"])
-            return {"count": len(sites), "sites": sites}
-        except Exception as e:
-            last_error = str(e)
+    for url in endpoints:
+        for attempt in range(2):
+            try:
+                if attempt > 0:
+                    time.sleep(3)
+                r = requests.get(url, params=params, headers=headers, timeout=15)
+                if r.status_code == 429:
+                    last_error = "Rate limited (429)"
+                    time.sleep(5)
+                    continue
+                r.raise_for_status()
+                facilities = r.json().get("Results", {}).get("Facilities", [])
+                sites = []
+                for f in facilities:
+                    flat = float(f.get("FacLat", 0) or 0)
+                    flon = float(f.get("FacLong", 0) or 0)
+                    dist = round(haversine(lat, lon, flat, flon), 2) if flat else 999.0
+                    status = f.get("RCRAComplianceStatus", "") or ""
+                    nc = "CA" in handler_types and status not in ["No Violation Identified", ""]
+                    sites.append({"name": f.get("FacName","Unknown"), "distance": dist, "status": status, "nc": nc})
+                sites.sort(key=lambda s: s["distance"])
+                return {"count": len(sites), "sites": sites}
+            except Exception as e:
+                last_error = str(e)
     return {"count": 0, "sites": [], "error": f"Failed: {last_error}"}
 
 
@@ -792,7 +801,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.59", "name": "Phase I ESA Proxy v9.59"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.60", "name": "Phase I ESA Proxy v9.60"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
