@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.57
+Phase I ESA Database Proxy — v9.58
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -191,6 +191,8 @@ FRS_RCRA_LQG  = "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/
 FRS_RCRA_TSD  = "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/20/query"
 # CIMC RCRA Corrective Action polygon layer — same source as EPA's CIMC map
 CIMC_RCRA_CA  = "https://services.arcgis.com/cJ9YHowT8TU7DUyn/arcgis/rest/services/NationalRCRABoundaries/FeatureServer/1/query"
+# ECHO GeoServer — RCRA facilities with full compliance data, no rate limiting
+ECHOGEO_RCRA  = "https://echogeo.epa.gov/arcgis/rest/services/ECHO/Facilities/MapServer/3/query"
 
 # ── DEP Cleanup field constants ───────────────────────────────────────────────
 DEP_FIELDS  = "BUSINESS_NAME,RSC2_REMEDIATION_STATUS_KEY,CLCC_CLEANUP_CATEGORY_KEY,SOURCE_DATABASE_NAME"
@@ -244,59 +246,62 @@ def echo_rcra(lat, lon, radius_miles, handler_types):
 
 
 def cimc_rcra_ca(lat, lon, radius_miles):
+    """Delegates to echogeo_rcra_all."""
+    return echogeo_rcra_all(lat, lon, radius_miles)
+
+
+def echogeo_rcra_all(lat, lon, radius_miles):
     """
-    Query RCRA Corrective Action facilities from CIMC NationalRCRABoundaries FeatureServer.
-    Uses polygon intersection — no rate limiting, same source as EPA CIMC map.
-    Fields: HANDLER_ID, HANDLER_NAME, LOCATION_STATE, LOCATION_CITY, LOCATION_STREET1
+    Query RCRA facilities from ECHO GeoServer — no rate limiting.
+    Returns ca, tsd, gen dicts filtered by radius and type.
     """
     mn_lat, mx_lat, mn_lon, mx_lon = bbox(lat, lon, radius_miles)
-    # Use envelope to find CA facility polygons that overlap with search area
     envelope = f"{mn_lon},{mn_lat},{mx_lon},{mx_lat}"
-    params = {
-        "geometry":       envelope,
-        "geometryType":   "esriGeometryEnvelope",
-        "spatialRel":     "esriSpatialRelIntersects",
-        "inSR":           "4326",
-        "outSR":          "4326",
-        "where":          "LOCATION_STATE='FL'",
-        "outFields":      "HANDLER_ID,HANDLER_NAME,LOCATION_CITY,LOCATION_STREET1,LOCATION_STATE,AREA_NAME,ENTIRE_FACILITY_IND",
-        "returnGeometry": "true",
-        "f":              "json",
-    }
+    fields = ("RCR_NAME,RCR_CITY,RCR_STATE,FAC_LAT,FAC_LONG,"
+              "RCRA_UNIVERSE,RCRA_CURR_COMPL_STATUS,RCRA_CURR_SNC,RCR_STATUS")
     try:
-        r = requests.get(CIMC_RCRA_CA, params=params, timeout=20)
+        r = requests.get(ECHOGEO_RCRA, params={
+            "geometry": envelope, "geometryType": "esriGeometryEnvelope",
+            "spatialRel": "esriSpatialRelIntersects",
+            "inSR": "4326", "outSR": "4326",
+            "where": "RCR_STATE='FL'",
+            "outFields": fields, "returnGeometry": "false", "f": "json",
+        }, timeout=20)
         r.raise_for_status()
         data = r.json()
     except Exception as e:
-        return {"count": 0, "sites": [], "error": str(e)}
+        empty = {"count": 0, "sites": [], "error": str(e)}
+        return {"ca": empty, "tsd": dict(empty), "gen": dict(empty)}
     if "error" in data:
-        return {"count": 0, "sites": [], "error": data["error"]}
-    # Deduplicate by HANDLER_ID — multiple polygons per facility (one per area)
-    seen_handlers = {}
+        empty = {"count": 0, "sites": [], "error": data["error"]}
+        return {"ca": empty, "tsd": dict(empty), "gen": dict(empty)}
+    ca_sites, tsd_sites, gen_sites = [], [], []
     for feat in data.get("features", []):
         attrs = feat.get("attributes", {})
-        geom  = feat.get("geometry", {})
-        handler_id = str(attrs.get("HANDLER_ID","") or "")
-        name = str(attrs.get("HANDLER_NAME","Unknown CA Facility") or "Unknown CA Facility")
-        # Get centroid of polygon for distance calculation
-        dist = 999.0
-        if geom:
-            # Use rings centroid approximation
-            rings = geom.get("rings", [])
-            if rings and rings[0]:
-                pts = rings[0]
-                avg_x = sum(p[0] for p in pts) / len(pts)
-                avg_y = sum(p[1] for p in pts) / len(pts)
-                dist = round(haversine(lat, lon, avg_y, avg_x), 2)
-        if handler_id not in seen_handlers or dist < seen_handlers[handler_id]["distance"]:
-            seen_handlers[handler_id] = {
-                "name": name,
-                "distance": dist,
-                "status": "Corrective Action",
-                "nc": True  # CA facility = NC by definition
-            }
-    sites = sorted(seen_handlers.values(), key=lambda s: s["distance"])
-    return {"count": len(sites), "sites": sites}
+        flat = float(attrs.get("FAC_LAT", 0) or 0)
+        flon = float(attrs.get("FAC_LONG", 0) or 0)
+        if not flat or not flon: continue
+        dist = round(haversine(lat, lon, flat, flon), 2)
+        name = str(attrs.get("RCR_NAME","Unknown") or "Unknown")
+        universe = str(attrs.get("RCRA_UNIVERSE","") or "").upper()
+        status = str(attrs.get("RCRA_CURR_COMPL_STATUS","") or "")
+        snc = str(attrs.get("RCRA_CURR_SNC","") or "")
+        site = {"name": name, "distance": dist, "status": status, "nc": False}
+        if "CA" in universe:
+            if dist <= radius_miles:
+                site["nc"] = status not in ["No Violation Identified",""] or snc == "Yes"
+                ca_sites.append(dict(site))
+        if any(t in universe for t in ["TSD","TSDF"]):
+            if dist <= 0.5:
+                tsd_sites.append(dict(site))
+        if any(t in universe for t in ["LQG","SQG","VSQG","CESQG"]):
+            if dist <= 0.05:
+                gen_sites.append(dict(site))
+    return {
+        "ca":  {"count": len(ca_sites),  "sites": sorted(ca_sites,  key=lambda s: s["distance"])},
+        "tsd": {"count": len(tsd_sites), "sites": sorted(tsd_sites, key=lambda s: s["distance"])},
+        "gen": {"count": len(gen_sites), "sites": sorted(gen_sites, key=lambda s: s["distance"])},
+    }
 
 
 def frs_rcra_all(lat, lon):
@@ -637,18 +642,22 @@ def query():
 
     def mk(fn): return lambda p: {"count": len(p), "sites": p}
 
-    # RCRA: FRS for TSD/generators (no rate limiting)
-    # CA runs in parallel via task_map below
-    frs_rcra_results = frs_rcra_all(lat, lon)
+    # RCRA: ECHO GeoServer for all types — no rate limiting, full compliance data
+    echogeo_results = echogeo_rcra_all(lat, lon, 1.0)
+    # FRS as fallback for TSD/gen if GeoServer fails
+    if echogeo_results["tsd"].get("error") or echogeo_results["gen"].get("error"):
+        frs_rcra_results = frs_rcra_all(lat, lon)
+        echogeo_results["tsd"] = frs_rcra_results["tsd"]
+        echogeo_results["gen"] = frs_rcra_results["gen"]
 
     task_map = {
         "npl":            lambda: frs_npl(lat, lon, 1.0, status_filter=["Currently on the Final NPL","Proposed for NPL"]),
         "fuds":           lambda: fuds(lat, lon, 1.0),
-        "rcra_ca":        lambda: cimc_rcra_ca(lat, lon, 1.0),
+        "rcra_ca":        lambda: echogeo_results["ca"],
         "state_superfund":get_state_superfund,
         "npl_del":        get_delisted,
         "cercla":         lambda: cercla(lat, lon, 0.5),
-        "rcra_tsd":       lambda: frs_rcra_results["tsd"],
+        "rcra_tsd":       lambda: echogeo_results["tsd"],
         "haz":            get_haz,
         "cont":           lambda: (lambda s: {"count": len(s), "sites": s})(merge_dedup(
                               parse_fdep(fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=CONT_WHERE, out_fields=DEP_FIELDS), lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC),
@@ -666,7 +675,7 @@ def query():
                               eric_query(lat, lon, 0.5, program_filter=["Drycleaning Solvent Cleanup Program","Responsible Party Cleanup"]))),
         "brown":          get_brownfields,
         "ust":            lambda: mk(None)(parse_fdep(fdep_query(STCM_TANKS, lat, lon, 0.05, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"), lat, lon, "FACILITY_NAME", "FACILITY_STATUS", {"Active","ACTIVE","Open","OPEN"})),
-        "rcra_gen":       lambda: frs_rcra_results["gen"],
+        "rcra_gen":       lambda: echogeo_results["gen"],
         "ic":             lambda: mk(None)(parse_fdep(fdep_query(ICR, lat, lon, 0.05, out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE"), lat, lon, "SITE_NAME", "IC_STATUS", {"ACTIVE","Active"})),
         "erns":           lambda: erns(zipcode),
     }
@@ -783,7 +792,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.57", "name": "Phase I ESA Proxy v9.57"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.58", "name": "Phase I ESA Proxy v9.58"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
