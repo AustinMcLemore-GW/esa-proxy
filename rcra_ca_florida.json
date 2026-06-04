@@ -1,0 +1,652 @@
+[
+  {
+    "name": "QUALITY CLEANERS",
+    "id": "FLD070875232",
+    "lat": 29.890849,
+    "lon": -81.296781,
+    "active_site": "-PA--",
+    "city": "ST AUGUSTINE",
+    "zip": "32080-4508",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "STONERIDGE FARMS INC",
+    "id": "FLD004059085",
+    "lat": 30.045532,
+    "lon": -81.726272,
+    "active_site": "--A--",
+    "city": "GREEN COVE SPRINGS",
+    "zip": "32043-0000",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "NAVAL SUPPORT ACTIVITY PANAMA CITY",
+    "id": "FL8170023792",
+    "lat": 30.177816,
+    "lon": -85.755975,
+    "active_site": "HPA--",
+    "city": "PANAMA CITY BEACH",
+    "zip": "32407-7018",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "JEA KENNEDY GENERATING STATION",
+    "id": "FLD000814392",
+    "lat": 30.3634,
+    "lon": -81.627852,
+    "active_site": "HPA--",
+    "city": "JACKSONVILLE",
+    "zip": "32206-1799",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "HOLLINGSHEAD CEMENT FACILITY 80104",
+    "id": "FLD982080129",
+    "lat": 30.141391,
+    "lon": -85.621318,
+    "active_site": "H-A--",
+    "city": "PANAMA CITY",
+    "zip": "32401-6900",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "KNIGHTS ARMAMENT COMPANY",
+    "id": "FLD064824030",
+    "lat": 28.527661,
+    "lon": -80.808214,
+    "active_site": "H-A--",
+    "city": "TITUSVILLE",
+    "zip": "32780-7902",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "FORMER CHEMKO TECHNICAL SERVICES INC FACILITY",
+    "id": "FLD982091506",
+    "lat": 28.751983,
+    "lon": -80.872313,
+    "active_site": "-PA--",
+    "city": "MIMS",
+    "zip": "32754-4824",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "HONEYWELL INC",
+    "id": "FLD982133308",
+    "lat": 28.024433,
+    "lon": -82.502189,
+    "active_site": "--A--",
+    "city": "TAMPA",
+    "zip": "33614-2720",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "EXIDE GROUP INC",
+    "id": "FLD080677347",
+    "lat": 30.354926,
+    "lon": -81.709636,
+    "active_site": "--A--",
+    "city": "JACKSONVILLE",
+    "zip": "32209-3345",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "UNIVERSAL CITY PROPERTY MANAGEMENT III LLC",
+    "id": "FLR000049718",
+    "lat": 28.435619,
+    "lon": -81.46178,
+    "active_site": "HPA--",
+    "city": "ORLANDO",
+    "zip": "32819-8703",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "HURLBURT FIELD FL",
+    "id": "FL7570024375",
+    "lat": 30.4136,
+    "lon": -86.6942,
+    "active_site": "HPA--",
+    "city": "HURLBURT FIELD",
+    "zip": "32544-5267",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "USDOD USAF OLA DET 1 23 WG",
+    "id": "FL8572128587",
+    "lat": 27.625,
+    "lon": -81.3333,
+    "active_site": "HPA--",
+    "city": "AVON PARK",
+    "zip": "33825-9381",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "UNIVERSITY OF FLORIDA",
+    "id": "FLD000823393",
+    "lat": 29.6469,
+    "lon": -82.3483,
+    "active_site": "HPA--",
+    "city": "GAINESVILLE",
+    "zip": "32611-2071",
+    "operating_tsdf": "---S--"
+  },
+  {
+    "name": "SLRC PROPERTY",
+    "id": "FLR000221663",
+    "lat": 28.430811,
+    "lon": -81.445811,
+    "active_site": "-PA--",
+    "city": "ORLANDO",
+    "zip": "32819-9385",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "WESTSHORE APARTMENTS",
+    "id": "FLD042468355",
+    "lat": 27.871935,
+    "lon": -82.527108,
+    "active_site": "--A--",
+    "city": "TAMPA",
+    "zip": "33618-0000",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "DAHER AEROSPACE",
+    "id": "FLD043117522",
+    "lat": 27.179495,
+    "lon": -80.229676,
+    "active_site": "HPA--",
+    "city": "STUART",
+    "zip": "34996-4012",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "ENVIROFOCUS TECHNOLOGIES LLC",
+    "id": "FLD004092839",
+    "lat": 27.963115,
+    "lon": -82.381153,
+    "active_site": "HPA--",
+    "city": "TAMPA",
+    "zip": "33619-2901",
+    "operating_tsdf": "---S--"
+  },
+  {
+    "name": "STERLING FIBERS INC",
+    "id": "FLD057231821",
+    "lat": 30.574045,
+    "lon": -87.108096,
+    "active_site": "-PA--",
+    "city": "PACE",
+    "zip": "32571-2758",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "UNITED NUCLEAR CORPORATION",
+    "id": "FLD984166942",
+    "lat": 27.845436,
+    "lon": -81.950045,
+    "active_site": "-PA--",
+    "city": "MULBERRY",
+    "zip": "33860-0000",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "2910 W. BEAVER ST. LLC",
+    "id": "FLD020982716",
+    "lat": 30.329944,
+    "lon": -81.71662,
+    "active_site": "-PA--",
+    "city": "JACKSONVILLE",
+    "zip": "32254-3170",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "MARTIN MARIETTA CORP",
+    "id": "FLD001690924",
+    "lat": 29.192904,
+    "lon": -81.067143,
+    "active_site": "-PA--",
+    "city": "DAYTONA BEACH",
+    "zip": "32114-1258",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "JOHN F KENNEDY SPACE CENTER",
+    "id": "FL6800014585",
+    "lat": 28.595485,
+    "lon": -80.637736,
+    "active_site": "HPA--",
+    "city": "KENNEDY SPACE CENTER",
+    "zip": "32899-0001",
+    "operating_tsdf": "---ST-"
+  },
+  {
+    "name": "USDOE PINELLAS PLANT - MARTIN MARIETTA",
+    "id": "FL6890090008",
+    "lat": 27.872425,
+    "lon": -82.748721,
+    "active_site": "-PA--",
+    "city": "LARGO",
+    "zip": "33777-1444",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "JEA NORTHSIDE GENERATING STATION",
+    "id": "FLD000735860",
+    "lat": 30.417047,
+    "lon": -81.552651,
+    "active_site": "HPA--",
+    "city": "JACKSONVILLE",
+    "zip": "32226-3033",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "PRECISION FABRICATING & CLEANING COMPANY INC",
+    "id": "FLD981471121",
+    "lat": 28.422282,
+    "lon": -80.762368,
+    "active_site": "HPA--",
+    "city": "COCOA",
+    "zip": "32926-5975",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "HERITAGE CRYSTAL CLEAN LLC",
+    "id": "FL0000346304",
+    "lat": 27.378518,
+    "lon": -80.382105,
+    "active_site": "--A--",
+    "city": "FORT PIERCE",
+    "zip": "34981-4833",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "SIVANCE LLC",
+    "id": "FLD050768548",
+    "lat": 29.70629,
+    "lon": -82.265463,
+    "active_site": "H-A--",
+    "city": "GAINESVILLE",
+    "zip": "32609-1694",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "KRATON CHEMICAL LLC",
+    "id": "FLD004065926",
+    "lat": 30.145715,
+    "lon": -85.621033,
+    "active_site": "HPA--",
+    "city": "PANAMA CITY",
+    "zip": "32401-4989",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "AIR PRODUCTS & CHEMICALS INC",
+    "id": "FLD008155673",
+    "lat": 30.580362,
+    "lon": -87.137802,
+    "active_site": "H-A--",
+    "city": "PACE",
+    "zip": "32571-2043",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "PATRICK SPACE FORCE BASE",
+    "id": "FL2570024404",
+    "lat": 28.23214,
+    "lon": -80.602148,
+    "active_site": "HPA--",
+    "city": "PATRICK AFB",
+    "zip": "32925-3343",
+    "operating_tsdf": "---S--"
+  },
+  {
+    "name": "HUDSON TECHNOLOGIES",
+    "id": "FLD054880216",
+    "lat": 29.324852,
+    "lon": -81.115148,
+    "active_site": "HPA--",
+    "city": "ORMOND BEACH",
+    "zip": "32174-2900",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "FLORIDA TILE CLOSED IMPOUNDMENT",
+    "id": "FLR000104695",
+    "lat": 28.044017,
+    "lon": -81.964552,
+    "active_site": "-PA--",
+    "city": "LAKELAND",
+    "zip": "33802-0000",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "NAVAL AIR STATION WHITING FIELD",
+    "id": "FL2170023244",
+    "lat": 30.710863,
+    "lon": -87.018653,
+    "active_site": "H-A--",
+    "city": "MILTON",
+    "zip": "32570-6105",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "TISCH COIN LAUNDRY",
+    "id": "FLD981859820",
+    "lat": 26.345396,
+    "lon": -81.780125,
+    "active_site": "-PA--",
+    "city": "BONITA SPRINGS",
+    "zip": "34135-5053",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "EXIDE TECHNOLOGIES",
+    "id": "FLD000608083",
+    "lat": 27.892708,
+    "lon": -82.401395,
+    "active_site": "HPA--",
+    "city": "TAMPA",
+    "zip": "33619-0000",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "FMC CORPORATION",
+    "id": "FLD000645481",
+    "lat": 30.337727,
+    "lon": -81.630387,
+    "active_site": "H-A--",
+    "city": "JACKSONVILLE",
+    "zip": "32206-6046",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "PINE HILLS ROAD LANDFILL",
+    "id": "FLD984178095",
+    "lat": 28.604669,
+    "lon": -81.450569,
+    "active_site": "-PA--",
+    "city": "ORLANDO",
+    "zip": "32809-0000",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "PRIMUS PIPE AND TUBE INC",
+    "id": "FLD064675978",
+    "lat": 28.869494,
+    "lon": -82.037778,
+    "active_site": "H-A--",
+    "city": "WILDWOOD",
+    "zip": "34785-0000",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "UNIVAR SOLUTIONS USA INC",
+    "id": "FLD067230771",
+    "lat": 28.004554,
+    "lon": -82.531111,
+    "active_site": "-PA--",
+    "city": "TAMPA",
+    "zip": "33634-8065",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "ESSENTIAL WATER SOLUTIONS LLC",
+    "id": "FLD004106811",
+    "lat": 27.904496,
+    "lon": -82.002694,
+    "active_site": "HPA--",
+    "city": "MULBERRY",
+    "zip": "33860-7926",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "EGLIN AIR FORCE BASE",
+    "id": "FL8570024366",
+    "lat": 30.477003,
+    "lon": -86.491313,
+    "active_site": "HPA--",
+    "city": "EGLIN AFB",
+    "zip": "32542-5105",
+    "operating_tsdf": "----T-"
+  },
+  {
+    "name": "COOK LUMBER & TREATING INC",
+    "id": "FLD032444093",
+    "lat": 26.589247,
+    "lon": -80.122117,
+    "active_site": "-PA--",
+    "city": "LAKE WORTH",
+    "zip": "33463-6915",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "ST MARKS POWDER INC",
+    "id": "FLD047096524",
+    "lat": 30.168212,
+    "lon": -84.219787,
+    "active_site": "HPA--",
+    "city": "CRAWFORDVILLE",
+    "zip": "32327-0000",
+    "operating_tsdf": "----T-"
+  },
+  {
+    "name": "UNIVAR SOLUTIONS USA LLC",
+    "id": "FLD059861344",
+    "lat": 25.940137,
+    "lon": -80.197298,
+    "active_site": "H-A--",
+    "city": "MIAMI",
+    "zip": "33162-1081",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "HONEYWELL INTERNATIONAL INC",
+    "id": "FLD001899848",
+    "lat": 28.024151,
+    "lon": -82.502536,
+    "active_site": "-PA--",
+    "city": "TAMPA",
+    "zip": "33614-2718",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "LOCKHEED MARTIN",
+    "id": "FLD060240207",
+    "lat": 28.450095,
+    "lon": -81.453336,
+    "active_site": "HPA--",
+    "city": "ORLANDO",
+    "zip": "32819-8907",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "L&P MATERIALS MANUFACTURING INC",
+    "id": "FLD053105821",
+    "lat": 30.335143,
+    "lon": -81.751999,
+    "active_site": "-PA--",
+    "city": "JACKSONVILLE",
+    "zip": "32254-2828",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "FAIRBANKS DISPOSAL PIT",
+    "id": "FLD980799050",
+    "lat": 29.726637,
+    "lon": -82.261926,
+    "active_site": "H-A--",
+    "city": "GAINESVILLE",
+    "zip": "32609-1288",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "NORTHROP GRUMMAN SYSTEMS CORPORATION - ST AUGUSTINE SITE",
+    "id": "FLD046771952",
+    "lat": 29.959574,
+    "lon": -81.34393,
+    "active_site": "HPA--",
+    "city": "ST AUGUSTINE",
+    "zip": "32095-6200",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "HONEYWELL AEROSPACE US LLC",
+    "id": "FLD004104105",
+    "lat": 27.91643,
+    "lon": -82.729679,
+    "active_site": "HPA--",
+    "city": "CLEARWATER",
+    "zip": "33764-7226",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "LITHIUM NICKEL ASSET HOLDING COMPANY I INC",
+    "id": "FLD043860451",
+    "lat": 29.773837,
+    "lon": -82.433174,
+    "active_site": "-PA--",
+    "city": "ALACHUA",
+    "zip": "32615-6556",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "ASHLAND INC",
+    "id": "FLD079859492",
+    "lat": 30.30464,
+    "lon": -81.699022,
+    "active_site": "-PA--",
+    "city": "JACKSONVILLE",
+    "zip": "32254-2091",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "TAMARAC MCNAB SELF STORAGE LLC",
+    "id": "FLD083200998",
+    "lat": 27.338055,
+    "lon": -82.449944,
+    "active_site": "-PA--",
+    "city": "SARASOTA",
+    "zip": "34232-6346",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "ASCEND PERFORMANCE MATERIALS OPERATIONS LLC",
+    "id": "FLD071951966",
+    "lat": 30.595696,
+    "lon": -87.256026,
+    "active_site": "HPA--",
+    "city": "CANTONMENT",
+    "zip": "32533-0000",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "THE DRH7425 LAND TRUST",
+    "id": "FLD004088258",
+    "lat": 27.885048,
+    "lon": -82.741881,
+    "active_site": "-PA--",
+    "city": "LARGO",
+    "zip": "33773-3017",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "LIGHTING RESOURCES LLC",
+    "id": "FLR000070565",
+    "lat": 29.172702,
+    "lon": -82.146801,
+    "active_site": "HPA--",
+    "city": "OCALA",
+    "zip": "34471-1228",
+    "operating_tsdf": "----T-"
+  },
+  {
+    "name": "MACDILL AFB",
+    "id": "FL6570024582",
+    "lat": 27.84512,
+    "lon": -82.501877,
+    "active_site": "HPA--",
+    "city": "TAMPA",
+    "zip": "33621-5207",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "NAVAL STATION MAYPORT",
+    "id": "FL9170024260",
+    "lat": 30.397356,
+    "lon": -81.422646,
+    "active_site": "HPA--",
+    "city": "JACKSONVILLE",
+    "zip": "32228-0000",
+    "operating_tsdf": "---S--"
+  },
+  {
+    "name": "SOUTHERN WOOD PIEDMONT CO",
+    "id": "FLD004053450",
+    "lat": 30.309263,
+    "lon": -81.972421,
+    "active_site": "HPA--",
+    "city": "BALDWIN",
+    "zip": "32234-1114",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "RTX CORPORATION - PRATT & WHITNEY DIVISION",
+    "id": "FLD001447952",
+    "lat": 26.905073,
+    "lon": -80.303616,
+    "active_site": "HPA--",
+    "city": "JUPITER",
+    "zip": "33478-6414",
+    "operating_tsdf": "---S--"
+  },
+  {
+    "name": "CAPE CANAVERAL SPACE FORCE STATION",
+    "id": "FL2800016121",
+    "lat": 28.500964,
+    "lon": -80.575552,
+    "active_site": "HPA--",
+    "city": "PATRICK AFB",
+    "zip": "32925-3305",
+    "operating_tsdf": "---ST-"
+  },
+  {
+    "name": "NAMMO PERRY INC.",
+    "id": "FLD047966593",
+    "lat": 29.970734,
+    "lon": -83.656112,
+    "active_site": "HPA--",
+    "city": "PERRY",
+    "zip": "32348-8505",
+    "operating_tsdf": "----T-"
+  },
+  {
+    "name": "NAS KEY WEST",
+    "id": "FL6170022952",
+    "lat": 24.587219,
+    "lon": -81.697479,
+    "active_site": "HPA--",
+    "city": "KEY WEST",
+    "zip": "33040-0000",
+    "operating_tsdf": "---S--"
+  },
+  {
+    "name": "AAR AIRCRAFT SERVICES LLC",
+    "id": "FLD004073177",
+    "lat": 30.172241,
+    "lon": -82.572063,
+    "active_site": "HPA--",
+    "city": "LAKE CITY",
+    "zip": "32025-2002",
+    "operating_tsdf": "------"
+  },
+  {
+    "name": "ALTA PERFORMANCE MATERIALS US LLC",
+    "id": "FLD000654251",
+    "lat": 27.897546,
+    "lon": -81.898303,
+    "active_site": "H-A--",
+    "city": "BARTOW",
+    "zip": "33830-9003",
+    "operating_tsdf": "------"
+  }
+]
