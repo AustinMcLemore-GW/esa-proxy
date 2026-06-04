@@ -200,7 +200,7 @@ VOL_WHERE   = "SOURCE_DATABASE_NAME IN ('DRYCLEANING','RESPONSPARTY')"
 DEP_NC = {"SRCO","ISSA","SSA","PA","SI","RI","FS","RD","RA","OAM",
            "OPEN","ACTIVE","INPROCESS","AWAITFUND","AWAITSITEACCESS","ELIGREVIEW"}
 # ERIC layer 8 SITE_STATUS values that are non-compliant (active cleanup)
-ERIC_NC = {"OPEN","ONHOLD"}  # CLOSED and CLOSEDWCOND = complete
+ERIC_NC = {"OPEN","ONHOLD","INPROCESS"}  # CLOSED and CLOSEDWCOND = complete; ONHOLD = paused but active
 
 # ── EPA ECHO RCRA ─────────────────────────────────────────────────────────────
 def echo_rcra(lat, lon, radius_miles, handler_types):
@@ -725,7 +725,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.48", "name": "Phase I ESA Proxy v9.48"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.49", "name": "Phase I ESA Proxy v9.49"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
