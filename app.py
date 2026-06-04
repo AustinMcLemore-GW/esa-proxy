@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.74
+Phase I ESA Database Proxy — v9.75
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -682,43 +682,35 @@ def query():
         fdep_raw_brown = fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=BROWN_WHERE, out_fields=DEP_FIELDS)
         fdep_sites = parse_fdep(fdep_raw_brown, lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)
 
-        # FDEP Brownfields Areas layer — official FDEP brownfields registry (BF numbers)
-        # Use point + distance query in meters (0.5 miles = 804.67m)
+        # FDEP Brownfields Areas layer — official FDEP brownfields registry
+        # Spatial ref is FL State Plane (102967) — use attribute lat/lon filter instead
+        mn_lat, mx_lat, mn_lon, mx_lon = bbox(lat, lon, 0.5)
         try:
             r = requests.get(FDEP_BROWN, params={
-                "geometry":     f"{lon},{lat}",
-                "geometryType": "esriGeometryPoint",
-                "spatialRel":   "esriSpatialRelIntersects",
-                "distance":     804.67,
-                "units":        "esriSRUnit_Meter",
-                "inSR":         "4326",
-                "outSR":        "4326",
-                "outFields":    "AREA_NAME,BF_NUMBER,SITE_STATUS,STATUS_DATE",
-                "returnGeometry": "true",
-                "f":            "json"
+                "where": (f"LATITUDE >= {mn_lat} AND LATITUDE <= {mx_lat} "
+                          f"AND LONGITUDE >= {mn_lon} AND LONGITUDE <= {mx_lon}"),
+                "outFields": "AREA_NAME,SITE_NAME,SITE_ID,REMEDIATION,LATITUDE,LONGITUDE",
+                "returnGeometry": "false",
+                "f": "json"
             }, timeout=15)
             fdep_bf_data = r.json()
         except:
             fdep_bf_data = {}
-        # Parse brownfield area polygons — use centroid for distance
+        # Parse brownfield site records using attribute lat/lon
         seen_bf = set()
         for feat in fdep_bf_data.get("features", []):
             attrs = feat.get("attributes", {})
-            geom  = feat.get("geometry", {})
-            name  = str(attrs.get("AREA_NAME","Unknown BF Area") or "Unknown BF Area")
-            bf_num = str(attrs.get("BF_NUMBER","") or "")
-            status = str(attrs.get("SITE_STATUS","") or "")
-            if bf_num in seen_bf: continue
-            if bf_num: seen_bf.add(bf_num)
-            # Centroid from polygon rings
-            rings = geom.get("rings", []) if geom else []
-            if not rings or not rings[0]: continue
-            pts = rings[0]
-            avg_x = sum(p[0] for p in pts) / len(pts)
-            avg_y = sum(p[1] for p in pts) / len(pts)
-            dist = round(haversine(lat, lon, avg_y, avg_x), 2)
+            name   = str(attrs.get("SITE_NAME","") or attrs.get("AREA_NAME","Unknown BF Site") or "Unknown BF Site")
+            site_id = str(attrs.get("SITE_ID","") or "")
+            status = str(attrs.get("REMEDIATION","") or "")
+            flat   = float(attrs.get("LATITUDE", 0) or 0)
+            flon   = float(attrs.get("LONGITUDE", 0) or 0)
+            if not flat or not flon: continue
+            if site_id in seen_bf: continue
+            if site_id: seen_bf.add(site_id)
+            dist = round(haversine(lat, lon, flat, flon), 2)
             if dist > 0.5: continue
-            nc = status.upper() in DEP_NC or status.upper() in {"OPEN","ACTIVE","INPROCESS"}
+            nc = status.upper() in DEP_NC or status.upper() in {"OPEN","ACTIVE","INPROCESS","SRCO"}
             # Only add if not already in fdep_sites by name keyword match
             # Use broad stopwords so single significant location word matches (e.g. "DANSVILLE")
             stopwords_bf = {"THE","OF","A","AN","AND","AT","IN","INC","LLC","CORP","SITE",
@@ -899,16 +891,15 @@ def debug():
         "dep_vol":        lambda: fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=VOL_WHERE, out_fields=DEP_FIELDS),
         "dep_brown":      lambda: fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=BROWN_WHERE, out_fields=DEP_FIELDS),
         "fdep_bf_areas":  lambda: requests.get(FDEP_BROWN, params={
-            "geometry": f"{lon-0.05},{lat-0.05},{lon+0.05},{lat+0.05}",
-            "geometryType": "esriGeometryEnvelope", "spatialRel": "esriSpatialRelIntersects",
-            "inSR": "4326", "outSR": "4326",
-            "outFields": "AREA_NAME,BF_NUMBER,SITE_STATUS",
+            "where": f"LATITUDE >= {lat-0.05} AND LATITUDE <= {lat+0.05} AND LONGITUDE >= {lon-0.05} AND LONGITUDE <= {lon+0.05}",
+            "outFields": "AREA_NAME,SITE_NAME,SITE_ID,REMEDIATION,LATITUDE,LONGITUDE",
             "returnGeometry": "false", "f": "json"}, timeout=15).json(),
-        "fdep_bf_areas_1mi": lambda: requests.get(FDEP_BROWN, params={
-            "geometry": f"{lon-0.015},{lat-0.015},{lon+0.015},{lat+0.015}",
-            "geometryType": "esriGeometryEnvelope", "spatialRel": "esriSpatialRelIntersects",
-            "inSR": "4326", "outSR": "4326",
-            "outFields": "*", "returnGeometry": "false", "f": "json"}, timeout=15).json(),
+        "fdep_bf_layer_info": lambda: requests.get(
+            "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/BROWNFIELD_AREAS/MapServer/1",
+            params={"f": "json"}, timeout=15).json(),
+        "fdep_bf_service":lambda: requests.get(
+            "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/BROWNFIELD_AREAS/MapServer",
+            params={"f": "json"}, timeout=15).json(),
         "dep_super":      lambda: fdep_query(DEP_CLEANUP, lat, lon, 1.0, where=SUPER_WHERE, out_fields=DEP_FIELDS),
         "fl_superfund":   lambda: fdep_query(FL_SUPERFUND, lat, lon, 1.0, out_fields="BUSINESS_NAME,RSC2_REMEDIATION_STATUS_KEY,CLCC_CLEANUP_CATEGORY_KEY"),
         "epa_brownfields":lambda: frs_query(FRS_ACRES, where_b, "PRIMARY_NAME,LATITUDE83,LONGITUDE83,SITE_STATUS"),
@@ -979,8 +970,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.74",
-        "name": "Phase I ESA Proxy v9.74",
+        "version": "9.75",
+        "name": "Phase I ESA Proxy v9.75",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
