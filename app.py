@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.54
+Phase I ESA Database Proxy — v9.55
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -783,75 +783,81 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.54", "name": "Phase I ESA Proxy v9.54"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.55", "name": "Phase I ESA Proxy v9.55"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
-    """Test CIMC NationalRCRABoundaries FeatureServer for CA sites."""
+    """Test CIMC RCRA CA query approaches."""
     lat = float(request.args.get("lat", 27.808116))
     lon = float(request.args.get("lon", -82.665444))
     results = {}
+    base = "https://services.arcgis.com/cJ9YHowT8TU7DUyn/arcgis/rest/services/NationalRCRABoundaries/FeatureServer/1/query"
+    mn_lat, mx_lat, mn_lon, mx_lon = bbox(lat, lon, 1.0)
 
-    # Test CIMC NationalRCRABoundaries — try multiple query approaches
-    base = "https://services.arcgis.com/cJ9YHowT8TU7DUyn/arcgis/rest/services/NationalRCRABoundaries/FeatureServer"
-
-    # Test 1: minimal where query layer 1
+    # Test 1: envelope spatial query with FL filter
     try:
-        r = requests.get(f"{base}/1/query", params={
-            "where": "1=1", "resultRecordCount": "1",
-            "outFields": "*", "returnGeometry": "false", "f": "json"
-        }, timeout=15)
-        data = r.json()
-        results["cimc_minimal_l1"] = {
-            "status": r.status_code,
-            "count": len(data.get("features",[])),
-            "fields": [f["name"] for f in data.get("fields",[])[:15]],
-            "sample": data.get("features",[{}])[0].get("attributes",{}) if data.get("features") else None,
-            "error": data.get("error")
-        }
-    except Exception as e:
-        results["cimc_minimal_l1"] = {"error": str(e)}
-
-    # Test 2: state filter layer 1
-    try:
-        r = requests.get(f"{base}/1/query", params={
-            "where": "STATE_CODE='FL'", "resultRecordCount": "3",
-            "outFields": "HANDLER_ID,FAC_NAME,ACTUAL_FAC_NAME,STATE_CODE,LATITUDE,LONGITUDE",
+        r = requests.get(base, params={
+            "geometry": f"{mn_lon},{mn_lat},{mx_lon},{mx_lat}",
+            "geometryType": "esriGeometryEnvelope",
+            "spatialRel": "esriSpatialRelIntersects",
+            "inSR": "4326", "outSR": "4326",
+            "where": "LOCATION_STATE='FL'",
+            "outFields": "HANDLER_ID,HANDLER_NAME,LOCATION_CITY,LOCATION_STATE",
             "returnGeometry": "false", "f": "json"
         }, timeout=15)
         data = r.json()
-        results["cimc_fl_filter"] = {
+        results["envelope_with_fl"] = {
             "status": r.status_code,
             "count": len(data.get("features",[])),
-            "sample": data.get("features",[{}])[0].get("attributes",{}) if data.get("features") else None,
-            "error": data.get("error")
+            "error": data.get("error"),
+            "sites": [f["attributes"] for f in data.get("features",[])]
         }
     except Exception as e:
-        results["cimc_fl_filter"] = {"error": str(e)}
+        results["envelope_with_fl"] = {"error": str(e)}
 
-    # Test 3: layer info
+    # Test 2: envelope spatial query NO state filter
     try:
-        r = requests.get(f"{base}/1", params={"f": "json"}, timeout=15)
+        r = requests.get(base, params={
+            "geometry": f"{mn_lon},{mn_lat},{mx_lon},{mx_lat}",
+            "geometryType": "esriGeometryEnvelope",
+            "spatialRel": "esriSpatialRelIntersects",
+            "inSR": "4326", "outSR": "4326",
+            "outFields": "HANDLER_ID,HANDLER_NAME,LOCATION_CITY,LOCATION_STATE",
+            "returnGeometry": "false", "f": "json"
+        }, timeout=15)
         data = r.json()
-        results["cimc_layer1_info"] = {
-            "name": data.get("name"),
-            "fields": [f["name"] for f in data.get("fields",[])[:20]],
-            "extent": data.get("extent")
+        results["envelope_no_filter"] = {
+            "status": r.status_code,
+            "count": len(data.get("features",[])),
+            "error": data.get("error"),
+            "sites": [f["attributes"] for f in data.get("features",[])]
         }
     except Exception as e:
-        results["cimc_layer1_info"] = {"error": str(e)}
+        results["envelope_no_filter"] = {"error": str(e)}
 
-    # Get layer info to see all available layers
+    # Test 3: FL state filter only, no spatial
     try:
-        r = requests.get(
-            "https://services.arcgis.com/cJ9YHowT8TU7DUyn/arcgis/rest/services/NationalRCRABoundaries/FeatureServer",
-            params={"f":"json"}, timeout=15)
+        r = requests.get(base, params={
+            "where": "LOCATION_STATE='FL'",
+            "resultRecordCount": "5",
+            "outFields": "HANDLER_ID,HANDLER_NAME,LOCATION_CITY,LOCATION_STATE",
+            "returnGeometry": "false", "f": "json"
+        }, timeout=15)
         data = r.json()
-        results["cimc_service_info"] = {
-            "layers": [{"id": l["id"], "name": l["name"]} for l in data.get("layers",[])]
+        results["fl_only_no_spatial"] = {
+            "status": r.status_code,
+            "count": len(data.get("features",[])),
+            "error": data.get("error"),
+            "sample": data.get("features",[{}])[0].get("attributes",{}) if data.get("features") else None
         }
     except Exception as e:
-        results["cimc_service_info"] = {"error": str(e)}
+        results["fl_only_no_spatial"] = {"error": str(e)}
+
+    # Test 4: run cimc_rcra_ca function directly
+    try:
+        results["cimc_fn_direct"] = cimc_rcra_ca(lat, lon, 1.0)
+    except Exception as e:
+        results["cimc_fn_direct"] = {"error": str(e)}
 
     return jsonify(results)
 
