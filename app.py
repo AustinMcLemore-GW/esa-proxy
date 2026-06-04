@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.61
+Phase I ESA Database Proxy — v9.62
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -755,6 +755,7 @@ def debug():
         "echo_rcra_tsd":  lambda: echo_rcra(lat, lon, 0.5, "TSD"),
         "echo_rcra_gen":  lambda: echo_rcra(lat, lon, 0.05, "LQG,SQG,VSQG"),
         "echo_rcra_all":  lambda: echo_rcra(lat, lon, 1.0, "CA,TSD,LQG,SQG,VSQG,CESQG"),
+        "echo_rcra_5mi":  lambda: echo_rcra(lat, lon, 5.0, "CA,TSD"),
         "fuds":           lambda: fuds(lat, lon, 1.0),
     }
     if db not in routes:
@@ -802,7 +803,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.61", "name": "Phase I ESA Proxy v9.61"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.62", "name": "Phase I ESA Proxy v9.62"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
