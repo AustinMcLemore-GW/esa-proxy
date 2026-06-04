@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.53
+Phase I ESA Database Proxy — v9.54
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -200,7 +200,7 @@ LUST_WHERE  = "CLCC_CLEANUP_CATEGORY_KEY='PETRO'"
 BROWN_WHERE = "CLCC_CLEANUP_CATEGORY_KEY='BROWN'"
 VOL_WHERE   = "SOURCE_DATABASE_NAME IN ('DRYCLEANING','RESPONSPARTY')"
 DEP_NC = {"SRCO","ISSA","SSA","PA","SI","RI","FS","RD","RA","OAM",
-           "OPEN","ACTIVE","INPROCESS","AWAITFUND","AWAITSITEACCESS","ELIGREVIEW"}
+           "OPEN","ACTIVE","INPROCESS","AWAITFUND","AWAITSITEACCESS","ELIGREVIEW","ONHOLD"}
 # ERIC layer 8 SITE_STATUS values that are non-compliant (active cleanup)
 ERIC_NC = {"OPEN","ONHOLD","INPROCESS"}  # CLOSED and CLOSEDWCOND = complete; ONHOLD = paused but active
 
@@ -249,16 +249,17 @@ def cimc_rcra_ca(lat, lon, radius_miles):
     Uses polygon intersection — no rate limiting, same source as EPA CIMC map.
     Fields: HANDLER_ID, HANDLER_NAME, LOCATION_STATE, LOCATION_CITY, LOCATION_STREET1
     """
+    mn_lat, mx_lat, mn_lon, mx_lon = bbox(lat, lon, radius_miles)
+    # Use envelope to find CA facility polygons that overlap with search area
+    envelope = f"{mn_lon},{mn_lat},{mx_lon},{mx_lat}"
     params = {
-        "geometry":       f"{lon},{lat}",
-        "geometryType":   "esriGeometryPoint",
+        "geometry":       envelope,
+        "geometryType":   "esriGeometryEnvelope",
         "spatialRel":     "esriSpatialRelIntersects",
-        "distance":       radius_miles * 1609.34,
-        "units":          "esriSRUnit_Meter",
         "inSR":           "4326",
         "outSR":          "4326",
-        "where":          f"LOCATION_STATE='FL'",
-        "outFields":      "HANDLER_ID,HANDLER_NAME,LOCATION_CITY,LOCATION_STREET1,LOCATION_STATE,AREA_NAME",
+        "where":          "LOCATION_STATE='FL'",
+        "outFields":      "HANDLER_ID,HANDLER_NAME,LOCATION_CITY,LOCATION_STREET1,LOCATION_STATE,AREA_NAME,ENTIRE_FACILITY_IND",
         "returnGeometry": "true",
         "f":              "json",
     }
@@ -782,7 +783,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.53", "name": "Phase I ESA Proxy v9.53"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.54", "name": "Phase I ESA Proxy v9.54"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
