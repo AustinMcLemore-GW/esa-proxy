@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.68
+Phase I ESA Database Proxy — v9.69
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -854,7 +854,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.68", "name": "Phase I ESA Proxy v9.68"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.69", "name": "Phase I ESA Proxy v9.69"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
@@ -1092,6 +1092,32 @@ def frs_lookup():
     except Exception as e:
         results["frs_rcra"] = {"error": str(e)}
     return jsonify(results)
+
+
+@app.route("/find_ca", methods=["GET"])
+def find_ca():
+    """Find RCRA CA facilities in Florida to test with."""
+    state = request.args.get("state", "FL")
+    try:
+        # Use ECHO get_facility_info with state filter and corrective action activity
+        r = requests.get("https://echodata.epa.gov/echo/rcra_rest_services.get_facility_info", params={
+            "output": "JSON",
+            "p_state": state,
+            "p_acact": "CA",  # corrective action activity type
+            "qcolumns": "1,2,3,4,5,6",
+            "responseset": "10"
+        }, timeout=20)
+        data = r.json()
+        facilities = data.get("Results", {}).get("Facilities", [])
+        return jsonify({
+            "status": r.status_code,
+            "count": len(facilities),
+            "facilities": [{"name": f.get("FacName"), "lat": f.get("FacLat"),
+                           "lon": f.get("FacLong"), "city": f.get("FacCity"),
+                           "id": f.get("SourceID")} for f in facilities[:10]]
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 
 if __name__ == "__main__":
