@@ -683,16 +683,19 @@ def query():
         fdep_sites = parse_fdep(fdep_raw_brown, lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)
 
         # FDEP Brownfields Areas layer — official FDEP brownfields registry (BF numbers)
-        # Polygon layer — use centroid approach via envelope query
-        mn_lat, mx_lat, mn_lon, mx_lon = bbox(lat, lon, 0.5)
+        # Use point + distance query in meters (0.5 miles = 804.67m)
         try:
             r = requests.get(FDEP_BROWN, params={
-                "geometry": f"{mn_lon},{mn_lat},{mx_lon},{mx_lat}",
-                "geometryType": "esriGeometryEnvelope",
-                "spatialRel": "esriSpatialRelIntersects",
-                "inSR": "4326", "outSR": "4326",
-                "outFields": "AREA_NAME,BF_NUMBER,SITE_STATUS,STATUS_DATE",
-                "returnGeometry": "true", "f": "json"
+                "geometry":     f"{lon},{lat}",
+                "geometryType": "esriGeometryPoint",
+                "spatialRel":   "esriSpatialRelIntersects",
+                "distance":     804.67,
+                "units":        "esriSRUnit_Meter",
+                "inSR":         "4326",
+                "outSR":        "4326",
+                "outFields":    "AREA_NAME,BF_NUMBER,SITE_STATUS,STATUS_DATE",
+                "returnGeometry": "true",
+                "f":            "json"
             }, timeout=15)
             fdep_bf_data = r.json()
         except:
@@ -895,6 +898,17 @@ def debug():
         "dep_lust":       lambda: fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=LUST_WHERE, out_fields=DEP_FIELDS),
         "dep_vol":        lambda: fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=VOL_WHERE, out_fields=DEP_FIELDS),
         "dep_brown":      lambda: fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=BROWN_WHERE, out_fields=DEP_FIELDS),
+        "fdep_bf_areas":  lambda: requests.get(FDEP_BROWN, params={
+            "geometry": f"{lon-0.05},{lat-0.05},{lon+0.05},{lat+0.05}",
+            "geometryType": "esriGeometryEnvelope", "spatialRel": "esriSpatialRelIntersects",
+            "inSR": "4326", "outSR": "4326",
+            "outFields": "AREA_NAME,BF_NUMBER,SITE_STATUS",
+            "returnGeometry": "false", "f": "json"}, timeout=15).json(),
+        "fdep_bf_areas_1mi": lambda: requests.get(FDEP_BROWN, params={
+            "geometry": f"{lon-0.015},{lat-0.015},{lon+0.015},{lat+0.015}",
+            "geometryType": "esriGeometryEnvelope", "spatialRel": "esriSpatialRelIntersects",
+            "inSR": "4326", "outSR": "4326",
+            "outFields": "*", "returnGeometry": "false", "f": "json"}, timeout=15).json(),
         "dep_super":      lambda: fdep_query(DEP_CLEANUP, lat, lon, 1.0, where=SUPER_WHERE, out_fields=DEP_FIELDS),
         "fl_superfund":   lambda: fdep_query(FL_SUPERFUND, lat, lon, 1.0, out_fields="BUSINESS_NAME,RSC2_REMEDIATION_STATUS_KEY,CLCC_CLEANUP_CATEGORY_KEY"),
         "epa_brownfields":lambda: frs_query(FRS_ACRES, where_b, "PRIMARY_NAME,LATITUDE83,LONGITUDE83,SITE_STATUS"),
