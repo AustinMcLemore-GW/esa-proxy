@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.58
+Phase I ESA Database Proxy — v9.59
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -792,11 +792,11 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.58", "name": "Phase I ESA Proxy v9.58"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.59", "name": "Phase I ESA Proxy v9.59"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
-    """Test CIMC RCRA CA query approaches."""
+    """Test ECHO GeoServer RCRA universe values in search area."""
     lat = float(request.args.get("lat", 27.808116))
     lon = float(request.args.get("lon", -82.665444))
     results = {}
@@ -889,7 +889,7 @@ def rcrtest():
     except Exception as e:
         results["echogeo_layer_info"] = {"error": str(e)}
 
-    # Test 5: ECHO GeoServer spatial query
+    # Test: get all RCRA universe values in area
     try:
         r = requests.get(
             "https://echogeo.epa.gov/arcgis/rest/services/ECHO/Facilities/MapServer/3/query",
@@ -898,20 +898,27 @@ def rcrtest():
                 "geometryType": "esriGeometryEnvelope",
                 "spatialRel": "esriSpatialRelIntersects",
                 "inSR": "4326", "outSR": "4326",
-                "outFields": "*",
-                "resultRecordCount": "5",
+                "where": "RCR_STATE='FL'",
+                "outFields": "RCR_NAME,FAC_LAT,FAC_LONG,RCRA_UNIVERSE,RCRA_CURR_COMPL_STATUS,RCRA_IDS",
                 "returnGeometry": "false", "f": "json"
             }, timeout=15)
         data = r.json()
-        results["echogeo_spatial"] = {
-            "status": r.status_code,
-            "count": len(data.get("features",[])),
-            "error": data.get("error"),
-            "fields": [f["name"] for f in data.get("fields",[])[:15]],
-            "sample": data.get("features",[{}])[0].get("attributes",{}) if data.get("features") else None
+        features = data.get("features", [])
+        universes = {}
+        for f in features:
+            u = f["attributes"].get("RCRA_UNIVERSE","unknown")
+            universes[u] = universes.get(u, 0) + 1
+        results["echogeo_universes"] = {
+            "total": len(features),
+            "universe_counts": universes,
+            "all_sites": [{"name": f["attributes"].get("RCR_NAME"),
+                           "universe": f["attributes"].get("RCRA_UNIVERSE"),
+                           "compliance": f["attributes"].get("RCRA_CURR_COMPL_STATUS"),
+                           "rcra_ids": f["attributes"].get("RCRA_IDS")}
+                          for f in features]
         }
     except Exception as e:
-        results["echogeo_spatial"] = {"error": str(e)}
+        results["echogeo_universes"] = {"error": str(e)}
 
     return jsonify(results)
 
