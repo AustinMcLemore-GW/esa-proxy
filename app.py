@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.64
+Phase I ESA Database Proxy — v9.66
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -694,7 +694,15 @@ def query():
                               parse_fdep(fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=VOL_WHERE, out_fields=DEP_FIELDS), lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC),
                               eric_query(lat, lon, 0.5, program_filter=["Drycleaning Solvent Cleanup Program","Responsible Party Cleanup"]))),
         "brown":          get_brownfields,
-        "ust":            lambda: mk(None)(parse_fdep(fdep_query(STCM_TANKS, lat, lon, 0.05, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"), lat, lon, "FACILITY_NAME", "FACILITY_STATUS", {"Active","ACTIVE","Open","OPEN"})),
+        "ust":            lambda: (lambda data: {"count": len(data), "sites": data})(
+                              # UST: never NC — registered tanks are compliant by definition
+                              # NC only comes from RCRA CA/compliance data, not tank registration status
+                              [{"name": s["name"], "distance": s["distance"],
+                                "status": s["status"], "nc": False}
+                               for s in parse_fdep(
+                                   fdep_query(STCM_TANKS, lat, lon, 0.05,
+                                       out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"),
+                                   lat, lon, "FACILITY_NAME", "FACILITY_STATUS", set())]),
         "rcra_gen":       lambda: echogeo_results["gen"],
         "ic":             lambda: mk(None)(parse_fdep(fdep_query(ICR, lat, lon, 0.05, out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE"), lat, lon, "SITE_NAME", "IC_STATUS", {"ACTIVE","Active"})),
         "erns":           lambda: erns(zipcode),
@@ -814,7 +822,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.64", "name": "Phase I ESA Proxy v9.64"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.66", "name": "Phase I ESA Proxy v9.66"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
@@ -824,6 +832,16 @@ def rcrtest():
     results = {}
     mn_lat, mx_lat, mn_lon, mx_lon = bbox(lat, lon, 1.0)
     envelope = f"{mn_lon},{mn_lat},{mx_lon},{mx_lat}"
+
+    # Check all ECHO GeoServer layers
+    try:
+        r = requests.get("https://echogeo.epa.gov/arcgis/rest/services/ECHO/Facilities/MapServer",
+            params={"f":"json"}, timeout=15)
+        data = r.json()
+        results["echo_geo_layers"] = [{"id": l["id"], "name": l["name"]}
+                                       for l in data.get("layers",[])]
+    except Exception as e:
+        results["echo_geo_layers_error"] = str(e)
 
     # Get all RCRA facilities with RCR_STATUS field
     try:
