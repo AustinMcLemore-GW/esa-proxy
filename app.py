@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.50
+Phase I ESA Database Proxy — v9.51
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -725,7 +725,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.50", "name": "Phase I ESA Proxy v9.50"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.51", "name": "Phase I ESA Proxy v9.51"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
@@ -734,32 +734,33 @@ def rcrtest():
     lon = float(request.args.get("lon", -82.665444))
     results = {}
 
-    # Test CIMC NationalRCRABoundaries layer 0 — point layer
-    cimc_url = "https://services.arcgis.com/cJ9YHowT8TU7DUyn/arcgis/rest/services/NationalRCRABoundaries/FeatureServer/0/query"
-    try:
-        r = requests.get(cimc_url, params={
-            "geometry": f"{lon},{lat}",
-            "geometryType": "esriGeometryPoint",
-            "spatialRel": "esriSpatialRelIntersects",
-            "distance": 1609.34,
-            "units": "esriSRUnit_Meter",
-            "inSR": "4326",
-            "outSR": "4326",
-            "outFields": "*",
-            "resultRecordCount": "10",
-            "returnGeometry": "false",
-            "f": "json"
-        }, timeout=15)
-        data = r.json()
-        results["cimc_layer0_point"] = {
-            "status": r.status_code,
-            "count": len(data.get("features",[])),
-            "error": data.get("error"),
-            "fields": [f["name"] for f in data.get("fields",[])[:15]] if not data.get("features") else None,
-            "sample": data.get("features",[{}])[0].get("attributes",{}) if data.get("features") else None
-        }
-    except Exception as e:
-        results["cimc_layer0_point"] = {"error": str(e)}
+    # Test CIMC NationalRCRABoundaries layer 1 — polygon layer
+    for layer_id in [0, 1]:
+        cimc_url = f"https://services.arcgis.com/cJ9YHowT8TU7DUyn/arcgis/rest/services/NationalRCRABoundaries/FeatureServer/{layer_id}/query"
+        try:
+            r = requests.get(cimc_url, params={
+                "geometry": f"{lon},{lat}",
+                "geometryType": "esriGeometryPoint",
+                "spatialRel": "esriSpatialRelIntersects",
+                "distance": 1609.34,
+                "units": "esriSRUnit_Meter",
+                "inSR": "4326",
+                "outSR": "4326",
+                "outFields": "*",
+                "resultRecordCount": "5",
+                "returnGeometry": "false",
+                "f": "json"
+            }, timeout=15)
+            data = r.json()
+            results[f"cimc_layer{layer_id}"] = {
+                "status": r.status_code,
+                "count": len(data.get("features",[])),
+                "error": data.get("error"),
+                "fields": [f["name"] for f in data.get("fields",[])[:20]],
+                "sample": data.get("features",[{}])[0].get("attributes",{}) if data.get("features") else None
+            }
+        except Exception as e:
+            results[f"cimc_layer{layer_id}"] = {"error": str(e)}
 
     # Get layer info to see all available layers
     try:
