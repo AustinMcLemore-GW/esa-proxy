@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.62
+Phase I ESA Database Proxy — v9.63
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -262,12 +262,14 @@ def cimc_rcra_ca(lat, lon, radius_miles):
 def echogeo_rcra_all(lat, lon, radius_miles):
     """
     Query RCRA facilities from ECHO GeoServer — no rate limiting.
-    Returns ca, tsd, gen dicts filtered by radius and type.
+    CA identified by RCR_STATUS containing 'A' flag (Corrective Action workload).
+    TSD identified by RCRA_UNIVERSE containing TSD.
+    Generators identified by RCRA_UNIVERSE (LQG/SQG/VSQG/CESQG).
     """
     mn_lat, mx_lat, mn_lon, mx_lon = bbox(lat, lon, radius_miles)
     envelope = f"{mn_lon},{mn_lat},{mx_lon},{mx_lat}"
     fields = ("RCR_NAME,RCR_CITY,RCR_STATE,FAC_LAT,FAC_LONG,"
-              "RCRA_UNIVERSE,RCRA_CURR_COMPL_STATUS,RCRA_CURR_SNC,RCR_STATUS")
+              "RCRA_UNIVERSE,RCRA_CURR_COMPL_STATUS,RCRA_CURR_SNC,RCR_STATUS,RCRA_IDS")
     try:
         r = requests.get(ECHOGEO_RCRA, params={
             "geometry": envelope, "geometryType": "esriGeometryEnvelope",
@@ -286,26 +288,35 @@ def echogeo_rcra_all(lat, lon, radius_miles):
         return {"ca": empty, "tsd": dict(empty), "gen": dict(empty)}
     ca_sites, tsd_sites, gen_sites = [], [], []
     for feat in data.get("features", []):
-        attrs = feat.get("attributes", {})
-        flat = float(attrs.get("FAC_LAT", 0) or 0)
-        flon = float(attrs.get("FAC_LONG", 0) or 0)
+        attrs    = feat.get("attributes", {})
+        flat     = float(attrs.get("FAC_LAT", 0) or 0)
+        flon     = float(attrs.get("FAC_LONG", 0) or 0)
         if not flat or not flon: continue
-        dist = round(haversine(lat, lon, flat, flon), 2)
-        name = str(attrs.get("RCR_NAME","Unknown") or "Unknown")
+        dist     = round(haversine(lat, lon, flat, flon), 2)
+        name     = str(attrs.get("RCR_NAME","Unknown") or "Unknown")
         universe = str(attrs.get("RCRA_UNIVERSE","") or "").upper()
-        status = str(attrs.get("RCRA_CURR_COMPL_STATUS","") or "")
-        snc = str(attrs.get("RCRA_CURR_SNC","") or "")
+        status   = str(attrs.get("RCRA_CURR_COMPL_STATUS","") or "")
+        snc      = str(attrs.get("RCRA_CURR_SNC","") or "")
+        rcr_status = str(attrs.get("RCR_STATUS","") or "")
         site = {"name": name, "distance": dist, "status": status, "nc": False}
-        if "CA" in universe:
-            if dist <= radius_miles:
-                site["nc"] = status not in ["No Violation Identified",""] or snc == "Yes"
-                ca_sites.append(dict(site))
-        if any(t in universe for t in ["TSD","TSDF"]):
-            if dist <= 0.5:
-                tsd_sites.append(dict(site))
-        if any(t in universe for t in ["LQG","SQG","VSQG","CESQG"]):
-            if dist <= 0.05:
-                gen_sites.append(dict(site))
+
+        # CA — RCR_STATUS contains 'A' flag indicating Corrective Action workload
+        # e.g. "Active (A    )" or "Active (PA   )" or "Active (HA   )"
+        is_ca = "(A" in rcr_status or " A " in rcr_status or rcr_status.endswith("A)")
+        if is_ca and dist <= radius_miles:
+            nc = status not in ["No Violation Identified",""] or snc == "Yes"
+            ca_site = dict(site)
+            ca_site["nc"] = nc
+            ca_sites.append(ca_site)
+
+        # TSD — within 0.5 miles
+        if any(t in universe for t in ["TSD","TSDF","LEGACY TSDF"]) and dist <= 0.5:
+            tsd_sites.append(dict(site))
+
+        # Generators — within 0.05 miles
+        if any(t in universe for t in ["LQG","SQG","VSQG","CESQG"]) and dist <= 0.05:
+            gen_sites.append(dict(site))
+
     return {
         "ca":  {"count": len(ca_sites),  "sites": sorted(ca_sites,  key=lambda s: s["distance"])},
         "tsd": {"count": len(tsd_sites), "sites": sorted(tsd_sites, key=lambda s: s["distance"])},
@@ -751,7 +762,7 @@ def debug():
         "epa_brownfields":lambda: frs_query(FRS_ACRES, where_b, "PRIMARY_NAME,LATITUDE83,LONGITUDE83,SITE_STATUS"),
         "cercla":         lambda: frs_query(FRS_SEMS, where_b, "PRIMARY_NAME,NPL_STATUS_NAME,LATITUDE83,LONGITUDE83"),
         "frs_npl":        lambda: frs_npl(lat, lon, 1.0),
-        "echo_rcra_ca":   lambda: echo_rcra(lat, lon, 1.0, "CA"),
+        "echo_rcra_ca":   lambda: echogeo_rcra_all(lat, lon, 1.0)["ca"],
         "echo_rcra_tsd":  lambda: echo_rcra(lat, lon, 0.5, "TSD"),
         "echo_rcra_gen":  lambda: echo_rcra(lat, lon, 0.05, "LQG,SQG,VSQG"),
         "echo_rcra_all":  lambda: echo_rcra(lat, lon, 1.0, "CA,TSD,LQG,SQG,VSQG,CESQG"),
@@ -803,7 +814,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.62", "name": "Phase I ESA Proxy v9.62"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.63", "name": "Phase I ESA Proxy v9.63"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
