@@ -725,65 +725,53 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.49", "name": "Phase I ESA Proxy v9.49"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.50", "name": "Phase I ESA Proxy v9.50"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
-    """Test FRS RCRA layers directly."""
-    lat = float(request.args.get("lat", 27.892213))
-    lon = float(request.args.get("lon", -82.715845))
+    """Test CIMC NationalRCRABoundaries FeatureServer for CA sites."""
+    lat = float(request.args.get("lat", 27.808116))
+    lon = float(request.args.get("lon", -82.665444))
     results = {}
-    fields = "PRIMARY_NAME,ACTIVE_STATUS,LATITUDE83,LONGITUDE83,REGISTRY_ID"
 
-    # Test FRS layer 15 — all RCRA facilities
+    # Test CIMC NationalRCRABoundaries layer 0 — point layer
+    cimc_url = "https://services.arcgis.com/cJ9YHowT8TU7DUyn/arcgis/rest/services/NationalRCRABoundaries/FeatureServer/0/query"
     try:
-        data = frs_spatial(FRS_RCRA, lat, lon, 1.0, out_fields=fields)
-        results["frs_layer15_rcra"] = {
-            "count": len(data.get("features",[])),
-            "error": data.get("error"),
-            "sites": [f["attributes"] for f in data.get("features",[])[:10]]
-        }
-    except Exception as e:
-        results["frs_layer15_rcra"] = {"error": str(e)}
-
-    # Test FRS layer 16 — active RCRA
-    try:
-        data = frs_spatial(FRS_RCRA_ACT, lat, lon, 1.0, out_fields=fields)
-        results["frs_layer16_active"] = {
-            "count": len(data.get("features",[])),
-            "error": data.get("error"),
-            "sites": [f["attributes"] for f in data.get("features",[])[:10]]
-        }
-    except Exception as e:
-        results["frs_layer16_active"] = {"error": str(e)}
-
-    # Test FRS layer 20 — TSD
-    try:
-        data = frs_spatial(FRS_RCRA_TSD, lat, lon, 1.0, out_fields=fields)
-        results["frs_layer20_tsd"] = {
-            "count": len(data.get("features",[])),
-            "error": data.get("error"),
-            "sites": [f["attributes"] for f in data.get("features",[])[:10]]
-        }
-    except Exception as e:
-        results["frs_layer20_tsd"] = {"error": str(e)}
-
-    # Test ECHO all RCRA no filter
-    try:
-        r = requests.get("https://echodata.epa.gov/echo/rcra_rest_services.get_facility_info", params={
-            "output": "JSON", "p_lat": lat, "p_lon": lon, "p_radius_mi": 1.0,
-            "qcolumns": "1,2,3,4,5,6,38,39,40,41"
+        r = requests.get(cimc_url, params={
+            "geometry": f"{lon},{lat}",
+            "geometryType": "esriGeometryPoint",
+            "spatialRel": "esriSpatialRelIntersects",
+            "distance": 1609.34,
+            "units": "esriSRUnit_Meter",
+            "inSR": "4326",
+            "outSR": "4326",
+            "outFields": "*",
+            "resultRecordCount": "10",
+            "returnGeometry": "false",
+            "f": "json"
         }, timeout=15)
         data = r.json()
-        facilities = data.get("Results", {}).get("Facilities", [])
-        results["echo_all_rcra"] = {
+        results["cimc_layer0_point"] = {
             "status": r.status_code,
-            "count": len(facilities),
-            "sites": [{"name": f.get("FacName"), "htype": f.get("RCRAHandlerType"),
-                       "compliance": f.get("RCRAComplianceStatus")} for f in facilities[:10]]
+            "count": len(data.get("features",[])),
+            "error": data.get("error"),
+            "fields": [f["name"] for f in data.get("fields",[])[:15]] if not data.get("features") else None,
+            "sample": data.get("features",[{}])[0].get("attributes",{}) if data.get("features") else None
         }
     except Exception as e:
-        results["echo_all_rcra"] = {"error": str(e)}
+        results["cimc_layer0_point"] = {"error": str(e)}
+
+    # Get layer info to see all available layers
+    try:
+        r = requests.get(
+            "https://services.arcgis.com/cJ9YHowT8TU7DUyn/arcgis/rest/services/NationalRCRABoundaries/FeatureServer",
+            params={"f":"json"}, timeout=15)
+        data = r.json()
+        results["cimc_service_info"] = {
+            "layers": [{"id": l["id"], "name": l["name"]} for l in data.get("layers",[])]
+        }
+    except Exception as e:
+        results["cimc_service_info"] = {"error": str(e)}
 
     return jsonify(results)
 
