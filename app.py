@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.67
+Phase I ESA Database Proxy — v9.68
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -854,7 +854,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.67", "name": "Phase I ESA Proxy v9.67"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.68", "name": "Phase I ESA Proxy v9.68"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
@@ -1050,6 +1050,47 @@ def fudsdebug():
         results["spatial_error"] = str(e)
 
     candidates = []  # unused now
+    return jsonify(results)
+
+
+@app.route("/frs_lookup", methods=["GET"])
+def frs_lookup():
+    """Look up a facility by FRS registry ID."""
+    registry_id = request.args.get("id", "")
+    if not registry_id:
+        return jsonify({"error": "id parameter required"}), 400
+    results = {}
+    # Query FRS all interests for this registry ID
+    try:
+        r = requests.get(
+            "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/8/query",
+            params={
+                "where": f"REGISTRY_ID='{registry_id}'",
+                "outFields": "*",
+                "returnGeometry": "false",
+                "f": "json"
+            }, timeout=15)
+        data = r.json()
+        results["frs_interests"] = {
+            "count": len(data.get("features",[])),
+            "features": [f["attributes"] for f in data.get("features",[])]
+        }
+    except Exception as e:
+        results["frs_interests"] = {"error": str(e)}
+    # Also check FRS RCRA layer
+    try:
+        r = requests.get(FRS_RCRA, params={
+            "where": f"REGISTRY_ID='{registry_id}'",
+            "outFields": "PRIMARY_NAME,ACTIVE_STATUS,LATITUDE83,LONGITUDE83,REGISTRY_ID",
+            "returnGeometry": "false", "f": "json"
+        }, timeout=15)
+        data = r.json()
+        results["frs_rcra"] = {
+            "count": len(data.get("features",[])),
+            "features": [f["attributes"] for f in data.get("features",[])]
+        }
+    except Exception as e:
+        results["frs_rcra"] = {"error": str(e)}
     return jsonify(results)
 
 
