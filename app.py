@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.52
+Phase I ESA Database Proxy — v9.53
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -189,6 +189,8 @@ FRS_RCRA      = "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/
 FRS_RCRA_ACT  = "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/16/query"
 FRS_RCRA_LQG  = "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/18/query"
 FRS_RCRA_TSD  = "https://geodata.epa.gov/arcgis/rest/services/OEI/FRS_INTERESTS/MapServer/20/query"
+# CIMC RCRA Corrective Action polygon layer — same source as EPA's CIMC map
+CIMC_RCRA_CA  = "https://services.arcgis.com/cJ9YHowT8TU7DUyn/arcgis/rest/services/NationalRCRABoundaries/FeatureServer/1/query"
 
 # ── DEP Cleanup field constants ───────────────────────────────────────────────
 DEP_FIELDS  = "BUSINESS_NAME,RSC2_REMEDIATION_STATUS_KEY,CLCC_CLEANUP_CATEGORY_KEY,SOURCE_DATABASE_NAME"
@@ -239,6 +241,61 @@ def echo_rcra(lat, lon, radius_miles, handler_types):
         except Exception as e:
             last_error = str(e)
     return {"count": 0, "sites": [], "error": f"Failed: {last_error}"}
+
+
+def cimc_rcra_ca(lat, lon, radius_miles):
+    """
+    Query RCRA Corrective Action facilities from CIMC NationalRCRABoundaries FeatureServer.
+    Uses polygon intersection — no rate limiting, same source as EPA CIMC map.
+    Fields: HANDLER_ID, HANDLER_NAME, LOCATION_STATE, LOCATION_CITY, LOCATION_STREET1
+    """
+    params = {
+        "geometry":       f"{lon},{lat}",
+        "geometryType":   "esriGeometryPoint",
+        "spatialRel":     "esriSpatialRelIntersects",
+        "distance":       radius_miles * 1609.34,
+        "units":          "esriSRUnit_Meter",
+        "inSR":           "4326",
+        "outSR":          "4326",
+        "where":          f"LOCATION_STATE='FL'",
+        "outFields":      "HANDLER_ID,HANDLER_NAME,LOCATION_CITY,LOCATION_STREET1,LOCATION_STATE,AREA_NAME",
+        "returnGeometry": "true",
+        "f":              "json",
+    }
+    try:
+        r = requests.get(CIMC_RCRA_CA, params=params, timeout=20)
+        r.raise_for_status()
+        data = r.json()
+    except Exception as e:
+        return {"count": 0, "sites": [], "error": str(e)}
+    if "error" in data:
+        return {"count": 0, "sites": [], "error": data["error"]}
+    # Deduplicate by HANDLER_ID — multiple polygons per facility (one per area)
+    seen_handlers = {}
+    for feat in data.get("features", []):
+        attrs = feat.get("attributes", {})
+        geom  = feat.get("geometry", {})
+        handler_id = str(attrs.get("HANDLER_ID","") or "")
+        name = str(attrs.get("HANDLER_NAME","Unknown CA Facility") or "Unknown CA Facility")
+        # Get centroid of polygon for distance calculation
+        dist = 999.0
+        if geom:
+            # Use rings centroid approximation
+            rings = geom.get("rings", [])
+            if rings and rings[0]:
+                pts = rings[0]
+                avg_x = sum(p[0] for p in pts) / len(pts)
+                avg_y = sum(p[1] for p in pts) / len(pts)
+                dist = round(haversine(lat, lon, avg_y, avg_x), 2)
+        if handler_id not in seen_handlers or dist < seen_handlers[handler_id]["distance"]:
+            seen_handlers[handler_id] = {
+                "name": name,
+                "distance": dist,
+                "status": "Corrective Action",
+                "nc": True  # CA facility = NC by definition
+            }
+    sites = sorted(seen_handlers.values(), key=lambda s: s["distance"])
+    return {"count": len(sites), "sites": sites}
 
 
 def frs_rcra_all(lat, lon):
@@ -586,7 +643,7 @@ def query():
     task_map = {
         "npl":            lambda: frs_npl(lat, lon, 1.0, status_filter=["Currently on the Final NPL","Proposed for NPL"]),
         "fuds":           lambda: fuds(lat, lon, 1.0),
-        "rcra_ca":        lambda: echo_rcra(lat, lon, 1.0, "CA"),
+        "rcra_ca":        lambda: cimc_rcra_ca(lat, lon, 1.0),
         "state_superfund":get_state_superfund,
         "npl_del":        get_delisted,
         "cercla":         lambda: cercla(lat, lon, 0.5),
@@ -725,7 +782,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.52", "name": "Phase I ESA Proxy v9.52"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.53", "name": "Phase I ESA Proxy v9.53"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
