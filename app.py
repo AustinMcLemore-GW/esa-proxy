@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.56
+Phase I ESA Database Proxy — v9.57
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -783,7 +783,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.56", "name": "Phase I ESA Proxy v9.56"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.57", "name": "Phase I ESA Proxy v9.57"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
@@ -866,11 +866,43 @@ def rcrtest():
     except Exception as e:
         results["fl_with_geometry"] = {"error": str(e)}
 
-    # Test 4: run cimc_rcra_ca function directly
+    # Test 4: ECHO GeoServer RCRA layer
     try:
-        results["cimc_fn_direct"] = cimc_rcra_ca(lat, lon, 1.0)
+        r = requests.get(
+            "https://echogeo.epa.gov/arcgis/rest/services/ECHO/Facilities/MapServer/3",
+            params={"f": "json"}, timeout=15)
+        data = r.json()
+        results["echogeo_layer_info"] = {
+            "name": data.get("name"),
+            "fields": [f["name"] for f in data.get("fields",[])[:15]],
+            "extent": str(data.get("extent",""))[:100]
+        }
     except Exception as e:
-        results["cimc_fn_direct"] = {"error": str(e)}
+        results["echogeo_layer_info"] = {"error": str(e)}
+
+    # Test 5: ECHO GeoServer spatial query
+    try:
+        r = requests.get(
+            "https://echogeo.epa.gov/arcgis/rest/services/ECHO/Facilities/MapServer/3/query",
+            params={
+                "geometry": f"{mn_lon},{mn_lat},{mx_lon},{mx_lat}",
+                "geometryType": "esriGeometryEnvelope",
+                "spatialRel": "esriSpatialRelIntersects",
+                "inSR": "4326", "outSR": "4326",
+                "outFields": "*",
+                "resultRecordCount": "5",
+                "returnGeometry": "false", "f": "json"
+            }, timeout=15)
+        data = r.json()
+        results["echogeo_spatial"] = {
+            "status": r.status_code,
+            "count": len(data.get("features",[])),
+            "error": data.get("error"),
+            "fields": [f["name"] for f in data.get("fields",[])[:15]],
+            "sample": data.get("features",[{}])[0].get("attributes",{}) if data.get("features") else None
+        }
+    except Exception as e:
+        results["echogeo_spatial"] = {"error": str(e)}
 
     return jsonify(results)
 
