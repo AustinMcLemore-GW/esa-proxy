@@ -579,24 +579,18 @@ def query():
 
     def mk(fn): return lambda p: {"count": len(p), "sites": p}
 
-    # RCRA: FRS for TSD/generators (no rate limiting), ECHO for CA (compliance data)
+    # RCRA: FRS for TSD/generators (no rate limiting)
+    # CA runs in parallel via task_map below
     frs_rcra_results = frs_rcra_all(lat, lon)
-    # Try ECHO for CA — if rate limited, CA shows 0
-    echo_ca_result = echo_rcra(lat, lon, 1.0, "CA")
-    echo_results = {
-        "ca":  echo_ca_result,
-        "tsd": frs_rcra_results["tsd"],
-        "gen": frs_rcra_results["gen"],
-    }
 
     task_map = {
         "npl":            lambda: frs_npl(lat, lon, 1.0, status_filter=["Currently on the Final NPL","Proposed for NPL"]),
         "fuds":           lambda: fuds(lat, lon, 1.0),
-        "rcra_ca":        lambda: echo_results["ca"],
+        "rcra_ca":        lambda: echo_rcra(lat, lon, 1.0, "CA"),
         "state_superfund":get_state_superfund,
         "npl_del":        get_delisted,
         "cercla":         lambda: cercla(lat, lon, 0.5),
-        "rcra_tsd":       lambda: echo_results["tsd"],
+        "rcra_tsd":       lambda: frs_rcra_results["tsd"],
         "haz":            get_haz,
         "cont":           lambda: (lambda s: {"count": len(s), "sites": s})(merge_dedup(
                               parse_fdep(fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=CONT_WHERE, out_fields=DEP_FIELDS), lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC),
@@ -614,7 +608,7 @@ def query():
                               eric_query(lat, lon, 0.5, program_filter=["Drycleaning Solvent Cleanup Program","Responsible Party Cleanup"]))),
         "brown":          get_brownfields,
         "ust":            lambda: mk(None)(parse_fdep(fdep_query(STCM_TANKS, lat, lon, 0.05, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"), lat, lon, "FACILITY_NAME", "FACILITY_STATUS", {"Active","ACTIVE","Open","OPEN"})),
-        "rcra_gen":       lambda: echo_results["gen"],
+        "rcra_gen":       lambda: frs_rcra_results["gen"],
         "ic":             lambda: mk(None)(parse_fdep(fdep_query(ICR, lat, lon, 0.05, out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE"), lat, lon, "SITE_NAME", "IC_STATUS", {"ACTIVE","Active"})),
         "erns":           lambda: erns(zipcode),
     }
@@ -731,7 +725,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.45", "name": "Phase I ESA Proxy v9.45"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.47", "name": "Phase I ESA Proxy v9.47"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
@@ -785,6 +779,23 @@ def rcrtest():
                                       for l in data.get("layers",[])]
     except Exception as e:
         results["frs_all_layers"] = {"error": str(e)}
+
+    # Test 5: ECHO with no handler type filter — get all RCRA facilities
+    try:
+        r = requests.get("https://echodata.epa.gov/echo/rcra_rest_services.get_facility_info", params={
+            "output": "JSON", "p_lat": lat, "p_lon": lon, "p_radius_mi": 1.0,
+            "qcolumns": "1,2,3,4,5,6,38,39,40,41,42"
+        }, timeout=15)
+        data = r.json()
+        facilities = data.get("Results", {}).get("Facilities", [])
+        results["echo_all_rcra"] = {
+            "status": r.status_code,
+            "count": len(facilities),
+            "facilities": [{"name": f.get("FacName"), "htype": f.get("RCRAHandlerType"),
+                           "compliance": f.get("RCRAComplianceStatus")} for f in facilities[:10]]
+        }
+    except Exception as e:
+        results["echo_all_rcra"] = {"error": str(e)}
 
     return jsonify(results)
 
