@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.73
+Phase I ESA Database Proxy — v9.74
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -211,6 +211,7 @@ def parse_frs(data, lat, lon, name_field, lat_field, lon_field, radius_miles,
 
 # ── FDEP URLs ─────────────────────────────────────────────────────────────────
 DEP_CLEANUP  = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CLEANUP_SP/MapServer/0/query"
+FDEP_BROWN   = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/BROWNFIELD_AREAS/MapServer/1/query"
 ERIC_LAYER   = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CLEANUP_SP/MapServer/8/query"
 FL_SUPERFUND = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CLEANUP_SP/MapServer/1/query"
 CHAZ         = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CHAZ/MapServer/5/query"
@@ -680,6 +681,65 @@ def query():
     def get_brownfields():
         fdep_raw_brown = fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=BROWN_WHERE, out_fields=DEP_FIELDS)
         fdep_sites = parse_fdep(fdep_raw_brown, lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC)
+
+        # FDEP Brownfields Areas layer — official FDEP brownfields registry (BF numbers)
+        # Polygon layer — use centroid approach via envelope query
+        mn_lat, mx_lat, mn_lon, mx_lon = bbox(lat, lon, 0.5)
+        try:
+            r = requests.get(FDEP_BROWN, params={
+                "geometry": f"{mn_lon},{mn_lat},{mx_lon},{mx_lat}",
+                "geometryType": "esriGeometryEnvelope",
+                "spatialRel": "esriSpatialRelIntersects",
+                "inSR": "4326", "outSR": "4326",
+                "outFields": "AREA_NAME,BF_NUMBER,SITE_STATUS,STATUS_DATE",
+                "returnGeometry": "true", "f": "json"
+            }, timeout=15)
+            fdep_bf_data = r.json()
+        except:
+            fdep_bf_data = {}
+        # Parse brownfield area polygons — use centroid for distance
+        seen_bf = set()
+        for feat in fdep_bf_data.get("features", []):
+            attrs = feat.get("attributes", {})
+            geom  = feat.get("geometry", {})
+            name  = str(attrs.get("AREA_NAME","Unknown BF Area") or "Unknown BF Area")
+            bf_num = str(attrs.get("BF_NUMBER","") or "")
+            status = str(attrs.get("SITE_STATUS","") or "")
+            if bf_num in seen_bf: continue
+            if bf_num: seen_bf.add(bf_num)
+            # Centroid from polygon rings
+            rings = geom.get("rings", []) if geom else []
+            if not rings or not rings[0]: continue
+            pts = rings[0]
+            avg_x = sum(p[0] for p in pts) / len(pts)
+            avg_y = sum(p[1] for p in pts) / len(pts)
+            dist = round(haversine(lat, lon, avg_y, avg_x), 2)
+            if dist > 0.5: continue
+            nc = status.upper() in DEP_NC or status.upper() in {"OPEN","ACTIVE","INPROCESS"}
+            # Only add if not already in fdep_sites by name keyword match
+            # Use broad stopwords so single significant location word matches (e.g. "DANSVILLE")
+            stopwords_bf = {"THE","OF","A","AN","AND","AT","IN","INC","LLC","CORP","SITE",
+                            "AREA","BROWNFIELD","BROWNFIELDS","COUNTY","PARK","HISTORIC",
+                            "LANDFILL","NORTH","SOUTH","CENTRAL","FORMER","FLORIDA",
+                            "PINELLAS","HILLSBOROUGH","MIAMI","DADE","BROWARD","PALM",
+                            "BEACH","ORANGE","DUVAL","SEMINOLE","POLK","MANATEE",
+                            "SARASOTA","VOLUSIA","BREVARD","PASCO","HERNANDO","CITRUS",
+                            "LAKE","SUMTER","ALACHUA","LEON","ESCAMBIA","SANTA","ROSA",
+                            "OKALOOSA","WALTON","BAY","NASSAU","CLAY","ST","JOHNS",
+                            "FLAGLER","PUTNAM","MARION","LEVY","GILCHRIST","COLUMBIA",
+                            "SUWANNEE","HAMILTON","MADISON","TAYLOR","JEFFERSON","WAKULLA",
+                            "FRANKLIN","LIBERTY","GADSDEN","JACKSON","CALHOUN","GULF",
+                            "WASHINGTON","HOLMES","OKEECHOBEE","GLADES","HENDRY",
+                            "CHARLOTTE","LEE","COLLIER","MONROE","INDIAN","RIVER",
+                            "MARTIN","OSCEOLA","HARDEE","DESOTO","HIGHLANDS","INDIAN"}
+            name_words = set(name.upper().replace("-"," ").split()) - stopwords_bf
+            existing_words = [set(s["name"].upper().replace("-"," ").split()) - stopwords_bf
+                              for s in fdep_sites]
+            # Match on 1 significant word (location names like DANSVILLE are unique enough)
+            if name_words and not any(len(name_words & ew) >= 1 for ew in existing_words):
+                fdep_sites.append({"name": name, "distance": dist,
+                                   "status": status, "nc": nc})
+
         fdep_coords = [(float(f["geometry"]["y"]), float(f["geometry"]["x"]))
                        for f in fdep_raw_brown.get("features", [])
                        if f.get("geometry") and "x" in f["geometry"]]
@@ -841,6 +901,7 @@ def debug():
         "cercla":         lambda: frs_query(FRS_SEMS, where_b, "PRIMARY_NAME,NPL_STATUS_NAME,LATITUDE83,LONGITUDE83"),
         "frs_npl":        lambda: frs_npl(lat, lon, 1.0),
         "echo_rcra_ca":   lambda: echogeo_rcra_all(lat, lon, 1.0)["ca"],
+        "dep_all":        lambda: fdep_query(DEP_CLEANUP, lat, lon, 0.5, out_fields=DEP_FIELDS + ",SOURCE_DATABASE_NAME,CLCC_CLEANUP_CATEGORY_KEY"),
         "echo_rcra_tsd":  lambda: echo_rcra(lat, lon, 0.5, "TSD"),
         "echo_rcra_gen":  lambda: echo_rcra(lat, lon, 0.05, "LQG,SQG,VSQG"),
         "echo_rcra_all":  lambda: echo_rcra(lat, lon, 1.0, "CA,TSD,LQG,SQG,VSQG,CESQG"),
@@ -904,8 +965,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.73",
-        "name": "Phase I ESA Proxy v9.73",
+        "version": "9.74",
+        "name": "Phase I ESA Proxy v9.74",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
