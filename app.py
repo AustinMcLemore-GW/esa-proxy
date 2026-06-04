@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.69
+Phase I ESA Database Proxy — v9.72
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -15,6 +15,7 @@ import requests, math, time, json, os
 #     the next fiscal year. Source:
 #     https://geospatial-usace.opendata.arcgis.com/datasets/3f8354667d5b4b1b8ad7a6e00c3cf3b1_1
 _FUDS_FILE = os.path.join(os.path.dirname(__file__), "fuds_florida.json")
+_RCRA_CA_FILE = os.path.join(os.path.dirname(__file__), "rcra_ca_florida.json")
 try:
     with open(_FUDS_FILE) as _f:
         _FUDS_DATA = json.load(_f)
@@ -24,6 +25,14 @@ except Exception as _e:
     FUDS_SITES = []
     FUDS_FY    = "unknown"
     print(f"WARNING: Could not load FUDS data: {_e}")
+
+try:
+    with open(_RCRA_CA_FILE) as _f:
+        RCRA_CA_DATA = json.load(_f)
+    print(f"Loaded {len(RCRA_CA_DATA)} FL RCRA CA facilities")
+except Exception as _e:
+    RCRA_CA_DATA = []
+    print(f"Warning: could not load rcra_ca_florida.json: {_e}")
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 
@@ -283,6 +292,32 @@ def echo_rcra(lat, lon, radius_miles, handler_types):
 def cimc_rcra_ca(lat, lon, radius_miles):
     """Delegates to echogeo_rcra_all."""
     return echogeo_rcra_all(lat, lon, radius_miles)
+
+
+def static_rcra_ca(lat, lon, radius_miles):
+    """
+    Query FL RCRA CA facilities from static JSON file (ECHO RCRA_FACILITIES.csv, FL only).
+    Source: EPA ECHO RCRAInfo download, ACTIVE_SITE field containing 'A' (Corrective Action).
+    Updated: from RCRA_FACILITIES.csv download date.
+    No rate limiting, no network dependency.
+    """
+    sites = []
+    for facility in RCRA_CA_DATA:
+        flat = facility.get("lat", 0)
+        flon = facility.get("lon", 0)
+        if not flat or not flon:
+            continue
+        dist = round(haversine(lat, lon, flat, flon), 2)
+        if dist > radius_miles:
+            continue
+        sites.append({
+            "name": facility.get("name", "Unknown"),
+            "distance": dist,
+            "status": "Corrective Action",
+            "nc": True  # CA = nc by definition
+        })
+    sites.sort(key=lambda s: s["distance"])
+    return {"count": len(sites), "sites": sites}
 
 
 def echogeo_rcra_all(lat, lon, radius_miles):
@@ -705,7 +740,7 @@ def query():
     task_map = {
         "npl":            lambda: frs_npl(lat, lon, 1.0, status_filter=["Currently on the Final NPL","Proposed for NPL"]),
         "fuds":           lambda: fuds(lat, lon, 1.0),
-        "rcra_ca":        lambda: echogeo_results["ca"],
+        "rcra_ca":        lambda: static_rcra_ca(lat, lon, 1.0),
         "state_superfund":get_state_superfund,
         "npl_del":        get_delisted,
         "cercla":         lambda: cercla(lat, lon, 0.5),
@@ -854,7 +889,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.69", "name": "Phase I ESA Proxy v9.69"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.72", "name": "Phase I ESA Proxy v9.72"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
@@ -1096,28 +1131,94 @@ def frs_lookup():
 
 @app.route("/find_ca", methods=["GET"])
 def find_ca():
-    """Find RCRA CA facilities in Florida to test with."""
+    """Look up Honeywell by handler ID to see what coords ECHO has."""
+    handler_id = request.args.get("id", "FLD004104105")
     state = request.args.get("state", "FL")
+    results = {}
+
+    # Look up by handler ID directly
     try:
-        # Use ECHO get_facility_info with state filter and corrective action activity
         r = requests.get("https://echodata.epa.gov/echo/rcra_rest_services.get_facility_info", params={
             "output": "JSON",
-            "p_state": state,
-            "p_acact": "CA",  # corrective action activity type
-            "qcolumns": "1,2,3,4,5,6",
-            "responseset": "10"
+            "p_id": handler_id,
+            "qcolumns": "1,2,3,4,5,6,38,39,40"
         }, timeout=20)
         data = r.json()
         facilities = data.get("Results", {}).get("Facilities", [])
-        return jsonify({
+        results["by_handler_id"] = {
             "status": r.status_code,
             "count": len(facilities),
             "facilities": [{"name": f.get("FacName"), "lat": f.get("FacLat"),
                            "lon": f.get("FacLong"), "city": f.get("FacCity"),
-                           "id": f.get("SourceID")} for f in facilities[:10]]
-        })
+                           "type": f.get("RCRAHandlerType"),
+                           "compliance": f.get("RCRAComplianceStatus")}
+                          for f in facilities]
+        }
     except Exception as e:
-        return jsonify({"error": str(e)})
+        results["by_handler_id_error"] = str(e)
+
+    # Also try large radius search near Honeywell
+    try:
+        r = requests.get("https://echodata.epa.gov/echo/rcra_rest_services.get_facility_info", params={
+            "output": "JSON",
+            "p_lat": 27.890774,
+            "p_lon": -82.720478,
+            "p_radius_mi": 5.0,
+            "qcolumns": "1,2,3,4,5,6,38,39,40"
+        }, timeout=20)
+        data = r.json()
+        facilities = data.get("Results", {}).get("Facilities", [])
+        results["5mi_radius"] = {
+            "status": r.status_code,
+            "count": len(facilities),
+            "facilities": [{"name": f.get("FacName"), "lat": f.get("FacLat"),
+                           "lon": f.get("FacLong"), "type": f.get("RCRAHandlerType")}
+                          for f in facilities[:5]]
+        }
+    except Exception as e:
+        results["5mi_radius_error"] = str(e)
+
+    return jsonify(results)
+
+
+@app.route("/find_ca_old", methods=["GET"])
+def find_ca_old():
+    """Find RCRA CA facilities in Florida by trying multiple ECHO parameters."""
+    state = request.args.get("state", "FL")
+    results = {}
+
+    # Attempt 1: p_htype=TSD (TSD facilities are most likely to have CA)
+    try:
+        r = requests.get("https://echodata.epa.gov/echo/rcra_rest_services.get_facility_info", params={
+            "output": "JSON", "p_state": state, "p_htype": "TSD",
+            "qcolumns": "1,2,3,4,5,6,38,39,40", "responseset": "10"
+        }, timeout=20)
+        data = r.json()
+        facilities = data.get("Results", {}).get("Facilities", [])
+        results["tsd_facilities"] = [{"name": f.get("FacName"), "lat": f.get("FacLat"),
+                                      "lon": f.get("FacLong"), "city": f.get("FacCity"),
+                                      "compliance": f.get("RCRAComplianceStatus"),
+                                      "handler_type": f.get("RCRAHandlerType")} 
+                                     for f in facilities[:10]]
+        results["tsd_status"] = r.status_code
+    except Exception as e:
+        results["tsd_error"] = str(e)
+
+    # Attempt 2: no filter, get any FL RCRA facility to see field names
+    try:
+        r = requests.get("https://echodata.epa.gov/echo/rcra_rest_services.get_facility_info", params={
+            "output": "JSON", "p_state": state,
+            "qcolumns": "1,2,3,4,5,6,38,39,40,41,42,43", "responseset": "3"
+        }, timeout=20)
+        data = r.json()
+        facilities = data.get("Results", {}).get("Facilities", [])
+        # Show all fields for first facility
+        results["sample_facility"] = facilities[0] if facilities else None
+        results["any_status"] = r.status_code
+    except Exception as e:
+        results["any_error"] = str(e)
+
+    return jsonify(results)
 
 
 if __name__ == "__main__":
