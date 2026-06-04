@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.66
+Phase I ESA Database Proxy — v9.67
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -26,6 +26,32 @@ except Exception as _e:
     print(f"WARNING: Could not load FUDS data: {_e}")
 
 app = Flask(__name__, static_folder='.', static_url_path='')
+
+# ── RCRA CA cache ─────────────────────────────────────────────────────────────
+# Caches ECHO RCRA CA results by 0.5-degree grid cell to avoid rate limiting.
+# Cache expires after 24 hours. Grid cell = round(lat,1), round(lon,1)
+import threading
+_rcra_cache = {}
+_rcra_cache_lock = threading.Lock()
+RCRA_CACHE_TTL = 86400  # 24 hours
+
+def _cache_key(lat, lon):
+    """Round to 0.5 degree grid — roughly 30 mile cells."""
+    return (round(lat * 2) / 2, round(lon * 2) / 2)
+
+def get_cached_rcra(lat, lon):
+    key = _cache_key(lat, lon)
+    with _rcra_cache_lock:
+        if key in _rcra_cache:
+            cached_time, cached_result = _rcra_cache[key]
+            if time.time() - cached_time < RCRA_CACHE_TTL:
+                return cached_result
+    return None
+
+def set_cached_rcra(lat, lon, result):
+    key = _cache_key(lat, lon)
+    with _rcra_cache_lock:
+        _rcra_cache[key] = (time.time(), result)
 CORS(app)
 
 @app.route('/')
@@ -265,7 +291,11 @@ def echogeo_rcra_all(lat, lon, radius_miles):
     CA identified by RCR_STATUS containing 'A' flag (Corrective Action workload).
     TSD identified by RCRA_UNIVERSE containing TSD.
     Generators identified by RCRA_UNIVERSE (LQG/SQG/VSQG/CESQG).
+    Results cached for 24 hours by 0.5-degree grid cell.
     """
+    cached = get_cached_rcra(lat, lon)
+    if cached is not None:
+        return cached
     mn_lat, mx_lat, mn_lon, mx_lon = bbox(lat, lon, radius_miles)
     envelope = f"{mn_lon},{mn_lat},{mx_lon},{mx_lat}"
     fields = ("RCR_NAME,RCR_CITY,RCR_STATE,FAC_LAT,FAC_LONG,"
@@ -317,11 +347,13 @@ def echogeo_rcra_all(lat, lon, radius_miles):
         if any(t in universe for t in ["LQG","SQG","VSQG","CESQG"]) and dist <= 0.05:
             gen_sites.append(dict(site))
 
-    return {
+    result = {
         "ca":  {"count": len(ca_sites),  "sites": sorted(ca_sites,  key=lambda s: s["distance"])},
         "tsd": {"count": len(tsd_sites), "sites": sorted(tsd_sites, key=lambda s: s["distance"])},
         "gen": {"count": len(gen_sites), "sites": sorted(gen_sites, key=lambda s: s["distance"])},
     }
+    set_cached_rcra(lat, lon, result)
+    return result
 
 
 def frs_rcra_all(lat, lon):
@@ -822,7 +854,7 @@ def rawdebug():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.66", "name": "Phase I ESA Proxy v9.66"})
+    return jsonify({"status": "ok", "service": "Phase I ESA Proxy", "version": "9.67", "name": "Phase I ESA Proxy v9.67"})
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
