@@ -533,7 +533,7 @@ function buildReport() {
   const p1 = "According to the Environmental Protection Agency's (EPA) Cleanups in My Community (CIMC) data, U.S. Army Corps of Engineers (USACE) Formerly Used Defense Sites (FUDS), EPA Enforcement and Compliance History Online (ECHO), and Florida Department of Environmental Protection (FDEP) geospatial data, there are "+(clauses.length?clauses.join('; '):'findings identified across all searched categories — see below')+".";
 
   const total = CFG.reduce((s,c)=>s+(results[c.id]?.count||0),0);
-  const p2 = "As identified by the same sources, there are "+total+" state or federally monitored contamination sites located within the applicable search parameters of the project site.";
+  const p2 = "As identified by the same sources, there "+(total===1?"is 1 state or federally monitored contamination site":"are "+total+" state or federally monitored contamination sites")+" located within the applicable search parameters of the project site.";
 
   const usedSrc = new Set();
   CFG.forEach(c=>{ if((results[c.id]?.count||0)>0) usedSrc.add(c.src); });
@@ -543,6 +543,9 @@ function buildReport() {
   let p3;
   if (!allNC.length) {
     p3 = "As reported by documents obtained from "+[...usedSrc].join(' / ')+", all facilities are actively within compliance.";
+  } else if (allNC.length === 1) {
+    const s = allNC[0];
+    p3 = "As reported by documents obtained from "+[...usedSrc].join(' / ')+", the following site is the only site not actively within compliance:\n\u00b7    "+s.name+" located approximately "+parseFloat(s.distance||0).toFixed(2)+" miles from the proposed project";
   } else {
     const bullets = allNC.map(s=>"\u00b7    "+s.name+" located approximately "+parseFloat(s.distance||0).toFixed(2)+" miles from the proposed project").join('\n');
     p3 = "As reported by documents obtained from "+[...usedSrc].join(' / ')+", the following sites are the only sites not actively within compliance:\n"+bullets;
