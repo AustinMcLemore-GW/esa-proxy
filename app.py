@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.80
+Phase I ESA Database Proxy — v9.81
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -685,10 +685,13 @@ def query():
 
         # Build initial coord list from DEP Cleanup geometry
         bf_coords = []
+        bf_names  = []
         for f in fdep_raw_brown.get("features", []):
             geom = f.get("geometry", {})
+            name = str(f.get("attributes", {}).get("BUSINESS_NAME","") or "")
             if geom and "x" in geom and "y" in geom:
                 bf_coords.append((float(geom["y"]), float(geom["x"])))
+                bf_names.append(name)
 
         # FDEP Brownfields Areas layer — official FDEP brownfields registry
         # Spatial ref is FL State Plane (102967) — use attribute lat/lon filter instead
@@ -708,14 +711,24 @@ def query():
         # Dedup by SITE_ID and coordinate proximity (0.01 miles ~ 50 feet)
         seen_bf = set()       # SITE_IDs already added
 
-        def coord_is_dup(slat, slon, threshold=0.01):
-            """Return True if within threshold miles of any existing brownfield site."""
-            return any(haversine(slat, slon, c[0], c[1]) < threshold for c in bf_coords)
+        def coord_is_dup(slat, slon, sname, threshold=0.1):
+            """Return True if within threshold miles AND shares a significant name word
+            with any existing brownfield site."""
+            stopwords = {"THE","OF","A","AN","AND","AT","IN","INC","LLC","CORP",
+                         "SITE","SITES","AREA","BROWNFIELD","BROWNFIELDS","COUNTY",
+                         "PARK","FORMER","FLORIDA","LANDFILL","HISTORIC","WASTE",
+                         "CLEANUP","INDUSTRIAL","COMMERCIAL","PROPERTY","STORMWATER",
+                         "POND","DETENTION","CLASS","III","II","I"}
+            name_words = set(sname.upper().replace("-"," ").split()) - stopwords
+            for c, cname in zip(bf_coords, bf_names):
+                if haversine(slat, slon, c[0], c[1]) < threshold:
+                    cname_words = set(cname.upper().replace("-"," ").split()) - stopwords
+                    if name_words & cname_words:  # any word overlap
+                        return True
+            return False
 
-        # First add DEP Cleanup layer 0 sites (already in fdep_sites)
-        for s in fdep_sites:
-            if "_lat" in s and "_lon" in s:
-                bf_coords.append((s["_lat"], s["_lon"]))
+        # First add DEP Cleanup layer 0 sites (already in fdep_sites) — no _lat/_lon stored, skip
+        # bf_coords already populated from fdep_raw_brown geometry above
 
         for feat in fdep_bf_data.get("features", []):
             attrs = feat.get("attributes", {})
@@ -729,9 +742,10 @@ def query():
             if site_id: seen_bf.add(site_id)
             dist = round(haversine(lat, lon, flat, flon), 2)
             if dist > 0.5: continue
-            if coord_is_dup(flat, flon): continue
+            if coord_is_dup(flat, flon, name): continue
             nc = status.upper() in DEP_NC or status.upper() in {"OPEN","ACTIVE","INPROCESS","SRCO"}
             bf_coords.append((flat, flon))
+            bf_names.append(name)
             fdep_sites.append({"name": name, "distance": dist, "status": status, "nc": nc})
 
         # Also query layer 0 — Brownfield Areas (designated area polygons)
@@ -747,7 +761,7 @@ def query():
             fdep_bf_area_data = r0.json()
         except:
             fdep_bf_area_data = {}
-        # Parse area records — only add if not already represented by coordinate proximity
+        # Parse area records — only add if not already represented by coordinate proximity + name
         for feat in fdep_bf_area_data.get("features", []):
             attrs = feat.get("attributes", {})
             area_id = str(attrs.get("AREA_ID","") or "")
@@ -761,8 +775,9 @@ def query():
             area_prefix = area_id[:10]
             if any(s_id[:10] == area_prefix for s_id in seen_bf):
                 continue
-            if coord_is_dup(flat, flon): continue
+            if coord_is_dup(flat, flon, name): continue
             bf_coords.append((flat, flon))
+            bf_names.append(name)
             fdep_sites.append({"name": name, "distance": dist,
                                "status": "Brownfield Area", "nc": False})
 
@@ -794,11 +809,12 @@ def query():
             epa_sites.append({"name": str(attrs.get("PRIMARY_NAME","Unknown")),
                               "distance": round(dist,2), "status": str(attrs.get("ACTIVE_STATUS","") or ""),
                               "nc": nc, "_lat": flat, "_lon": flon})
-        # Drop EPA ACRES sites within 0.01 miles of an existing brownfield site (coord dedup)
+        # Drop EPA ACRES sites that are coordinate+name duplicates of existing brownfield sites
         filtered_epa = []
         for epa in epa_sites:
-            if not coord_is_dup(epa["_lat"], epa["_lon"]):
+            if not coord_is_dup(epa["_lat"], epa["_lon"], epa["name"]):
                 bf_coords.append((epa["_lat"], epa["_lon"]))
+                bf_names.append(epa["name"])
                 filtered_epa.append(epa)
         # Remove internal coords before returning
         for s in filtered_epa:
@@ -1017,8 +1033,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.80",
-        "name": "Phase I ESA Proxy v9.80",
+        "version": "9.81",
+        "name": "Phase I ESA Proxy v9.81",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
