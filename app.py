@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.82
+Phase I ESA Database Proxy — v9.83
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -711,7 +711,7 @@ def query():
         # Dedup by SITE_ID and coordinate proximity (0.01 miles ~ 50 feet)
         seen_bf = set()       # SITE_IDs already added
 
-        def coord_is_dup(slat, slon, sname, threshold=0.1):
+        def coord_is_dup(slat, slon, sname, threshold=0.15):
             """Return True if within threshold miles AND shares a significant word stem
             with any existing brownfield site. Truncates to 5 chars for typo tolerance."""
             import re
@@ -891,9 +891,8 @@ def query():
 
     # ── Cross-category deduplication ─────────────────────────────────────────
     # A site appearing in multiple DEP Cleanup categories should only be counted
-    # in the highest-priority category. Priority: state_superfund > lust > cont > vol
-    # Brownfields handled separately below via name-based dedup against vol
-    dedup_priority = ["state_superfund", "lust", "cont", "vol"]
+    # in the highest-priority category. Priority: brown > state_superfund > lust > cont > vol
+    dedup_priority = ["brown", "state_superfund", "lust", "cont", "vol"]
     dedup_stopwords = {"THE","OF","A","AN","AND","AT","IN","INC","LLC","CORP",
                        "SITE","SITES","AREA","BROWNFIELD","BROWNFIELDS","COUNTY",
                        "PARK","FORMER","FLORIDA","LANDFILL","HISTORIC","WASTE",
@@ -1053,8 +1052,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.82",
-        "name": "Phase I ESA Proxy v9.82",
+        "version": "9.83",
+        "name": "Phase I ESA Proxy v9.83",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
