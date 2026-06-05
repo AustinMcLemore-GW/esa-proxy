@@ -901,6 +901,10 @@ def debug():
             "where": f"LATITUDE >= {lat-0.05} AND LATITUDE <= {lat+0.05} AND LONGITUDE >= {lon-0.05} AND LONGITUDE <= {lon+0.05}",
             "outFields": "AREA_NAME,SITE_NAME,SITE_ID,REMEDIATION,LATITUDE,LONGITUDE",
             "returnGeometry": "false", "f": "json"}, timeout=15).json(),
+        "fdep_bf_layer0": lambda: requests.get(
+            "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/BROWNFIELD_AREAS/MapServer/0/query",
+            params={"where": f"LATITUDE >= {lat-0.05} AND LATITUDE <= {lat+0.05} AND LONGITUDE >= {lon-0.05} AND LONGITUDE <= {lon+0.05}",
+                    "outFields": "*", "returnGeometry": "false", "f": "json"}, timeout=15).json(),
         "fdep_bf_layer_info": lambda: requests.get(
             "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/BROWNFIELD_AREAS/MapServer/1",
             params={"f": "json"}, timeout=15).json(),
