@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.83
+Phase I ESA Database Proxy — v9.85
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -370,17 +370,26 @@ def echogeo_rcra_all(lat, lon, radius_miles):
         rcr_status = str(attrs.get("RCR_STATUS","") or "")
         site = {"name": name, "distance": dist, "status": status, "nc": False}
 
-        # CA — RCR_STATUS contains 'A' flag indicating Corrective Action workload
-        # e.g. "Active (A    )" or "Active (PA   )" or "Active (HA   )"
-        is_ca = "(A" in rcr_status or " A " in rcr_status or rcr_status.endswith("A)")
+        # Parse flags from RCR_STATUS — format: "Active (FLAGS)"
+        # e.g. "Active (H    )" "Active ( PA  )" "Active (A    )" "Active (HA   )"
+        import re as _re
+        flag_match = _re.search(r'\(([^)]+)\)', rcr_status)
+        flag_str = flag_match.group(1).strip() if flag_match else ""
+        flags = set(flag_str.split())  # e.g. {"PA"} or {"H"} or {"A"} or {"HA"}
+
+        # CA — 'A' appears as standalone flag or part of multi-flag like HA
+        is_ca = any(f == "A" or f.endswith("A") for f in flags) or "A" in flag_str
         if is_ca and dist <= radius_miles:
             nc = status not in ["No Violation Identified",""] or snc == "Yes"
             ca_site = dict(site)
             ca_site["nc"] = nc
             ca_sites.append(ca_site)
 
-        # TSD — within 0.5 miles
-        if any(t in universe for t in ["TSD","TSDF","LEGACY TSDF"]) and dist <= 0.5:
+        # TSD — 'P' flag = active RCRA permit = TSD facility
+        # e.g. "Active ( PA  )" where PA = Permit + something
+        is_tsd = (any("P" in f for f in flags) or
+                  any(t in universe for t in ["TSD","TSDF","LEGACY TSDF"]))
+        if is_tsd and dist <= 0.5:
             tsd_sites.append(dict(site))
 
         # Generators — within 0.05 miles
@@ -1052,8 +1061,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.83",
-        "name": "Phase I ESA Proxy v9.83",
+        "version": "9.85",
+        "name": "Phase I ESA Proxy v9.85",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
