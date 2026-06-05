@@ -711,27 +711,17 @@ def query():
             dist = round(haversine(lat, lon, flat, flon), 2)
             if dist > 0.5: continue
             nc = status.upper() in DEP_NC or status.upper() in {"OPEN","ACTIVE","INPROCESS","SRCO"}
-            # Only add if not already in fdep_sites by name keyword match
-            # Use broad stopwords so single significant location word matches (e.g. "DANSVILLE")
-            stopwords_bf = {"THE","OF","A","AN","AND","AT","IN","INC","LLC","CORP","SITE",
-                            "AREA","BROWNFIELD","BROWNFIELDS","COUNTY","PARK","HISTORIC",
-                            "LANDFILL","NORTH","SOUTH","CENTRAL","FORMER","FLORIDA",
-                            "PINELLAS","HILLSBOROUGH","MIAMI","DADE","BROWARD","PALM",
-                            "BEACH","ORANGE","DUVAL","SEMINOLE","POLK","MANATEE",
-                            "SARASOTA","VOLUSIA","BREVARD","PASCO","HERNANDO","CITRUS",
-                            "LAKE","SUMTER","ALACHUA","LEON","ESCAMBIA","SANTA","ROSA",
-                            "OKALOOSA","WALTON","BAY","NASSAU","CLAY","ST","JOHNS",
-                            "FLAGLER","PUTNAM","MARION","LEVY","GILCHRIST","COLUMBIA",
-                            "SUWANNEE","HAMILTON","MADISON","TAYLOR","JEFFERSON","WAKULLA",
-                            "FRANKLIN","LIBERTY","GADSDEN","JACKSON","CALHOUN","GULF",
-                            "WASHINGTON","HOLMES","OKEECHOBEE","GLADES","HENDRY",
-                            "CHARLOTTE","LEE","COLLIER","MONROE","INDIAN","RIVER",
-                            "MARTIN","OSCEOLA","HARDEE","DESOTO","HIGHLANDS","INDIAN"}
+            # Only add if not already in fdep_sites by close name match
+            # Strip generic words, match on remaining significant terms
+            stopwords_bf = {"THE","OF","A","AN","AND","AT","IN","INC","LLC","CORP",
+                            "SITE","SITES","AREA","BROWNFIELD","BROWNFIELDS","COUNTY",
+                            "PARK","FORMER","FLORIDA","LANDFILL","HISTORIC","WASTE",
+                            "CLEANUP","INDUSTRIAL","COMMERCIAL","PROPERTY"}
             name_words = set(name.upper().replace("-"," ").split()) - stopwords_bf
             existing_words = [set(s["name"].upper().replace("-"," ").split()) - stopwords_bf
                               for s in fdep_sites]
-            # Match on 1 significant word (location names like DANSVILLE are unique enough)
-            if name_words and not any(len(name_words & ew) >= 1 for ew in existing_words):
+            # Require 2+ word overlap to suppress
+            if name_words and not any(len(name_words & ew) >= 2 for ew in existing_words):
                 fdep_sites.append({"name": name, "distance": dist,
                                    "status": status, "nc": nc})
 
