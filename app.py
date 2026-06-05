@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.76
+Phase I ESA Database Proxy — v9.77
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -212,6 +212,7 @@ def parse_frs(data, lat, lon, name_field, lat_field, lon_field, radius_miles,
 # ── FDEP URLs ─────────────────────────────────────────────────────────────────
 DEP_CLEANUP  = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CLEANUP_SP/MapServer/0/query"
 FDEP_BROWN   = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/BROWNFIELD_AREAS/MapServer/1/query"
+FDEP_BROWN_AREAS = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/BROWNFIELD_AREAS/MapServer/0/query"
 ERIC_LAYER   = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CLEANUP_SP/MapServer/8/query"
 FL_SUPERFUND = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CLEANUP_SP/MapServer/1/query"
 CHAZ         = "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/CHAZ/MapServer/5/query"
@@ -725,6 +726,45 @@ def query():
                 fdep_sites.append({"name": name, "distance": dist,
                                    "status": status, "nc": nc})
 
+        # Also query layer 0 — Brownfield Areas (designated area polygons)
+        # Catches sites like Dansville North that have area designation but no layer 1 BSRA yet
+        try:
+            r0 = requests.get(FDEP_BROWN_AREAS, params={
+                "where": (f"LATITUDE >= {mn_lat} AND LATITUDE <= {mx_lat} "
+                          f"AND LONGITUDE >= {mn_lon} AND LONGITUDE <= {mx_lon}"),
+                "outFields": "AREA_NAME,AREA_ID,LATITUDE,LONGITUDE,RESOLUTION_DATE",
+                "returnGeometry": "false",
+                "f": "json"
+            }, timeout=15)
+            fdep_bf_area_data = r0.json()
+        except:
+            fdep_bf_area_data = {}
+        # Parse area records — only add if area not already represented by a layer 1 site
+        for feat in fdep_bf_area_data.get("features", []):
+            attrs = feat.get("attributes", {})
+            area_id = str(attrs.get("AREA_ID","") or "")
+            name    = str(attrs.get("AREA_NAME","Unknown BF Area") or "Unknown BF Area")
+            flat    = float(attrs.get("LATITUDE", 0) or 0)
+            flon    = float(attrs.get("LONGITUDE", 0) or 0)
+            if not flat or not flon: continue
+            dist = round(haversine(lat, lon, flat, flon), 2)
+            if dist > 0.5: continue
+            # Skip if any layer 1 site has the same area_id prefix (first 10 chars)
+            area_prefix = area_id[:10]
+            if any(s_id[:10] == area_prefix for s_id in seen_bf):
+                continue
+            # Skip if name already in fdep_sites
+            stopwords_bf = {"THE","OF","A","AN","AND","AT","IN","INC","LLC","CORP",
+                            "SITE","SITES","AREA","BROWNFIELD","BROWNFIELDS","COUNTY",
+                            "PARK","FORMER","FLORIDA","LANDFILL","HISTORIC","WASTE",
+                            "CLEANUP","INDUSTRIAL","COMMERCIAL","PROPERTY"}
+            name_words = set(name.upper().replace("-"," ").split()) - stopwords_bf
+            existing_words = [set(s["name"].upper().replace("-"," ").split()) - stopwords_bf
+                              for s in fdep_sites]
+            if name_words and not any(len(name_words & ew) >= 2 for ew in existing_words):
+                fdep_sites.append({"name": name, "distance": dist,
+                                   "status": "Brownfield Area", "nc": False})
+
         fdep_coords = [(float(f["geometry"]["y"]), float(f["geometry"]["x"]))
                        for f in fdep_raw_brown.get("features", [])
                        if f.get("geometry") and "x" in f["geometry"]]
@@ -981,8 +1021,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.76",
-        "name": "Phase I ESA Proxy v9.76",
+        "version": "9.77",
+        "name": "Phase I ESA Proxy v9.77",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
