@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.79
+Phase I ESA Database Proxy — v9.80
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -949,7 +949,7 @@ def debug():
             params={"f": "json"}, timeout=15).json(),
         "dep_super":      lambda: fdep_query(DEP_CLEANUP, lat, lon, 1.0, where=SUPER_WHERE, out_fields=DEP_FIELDS),
         "fl_superfund":   lambda: fdep_query(FL_SUPERFUND, lat, lon, 1.0, out_fields="BUSINESS_NAME,RSC2_REMEDIATION_STATUS_KEY,CLCC_CLEANUP_CATEGORY_KEY"),
-        "epa_brownfields":lambda: frs_query(FRS_ACRES, where_b, "PRIMARY_NAME,LATITUDE83,LONGITUDE83,SITE_STATUS"),
+        "epa_brownfields":lambda: frs_spatial(FRS_ACRES, lat, lon, 0.5, out_fields="PRIMARY_NAME,LATITUDE83,LONGITUDE83,ACTIVE_STATUS,INTEREST_TYPE,REGISTRY_ID"),
         "cercla":         lambda: frs_query(FRS_SEMS, where_b, "PRIMARY_NAME,NPL_STATUS_NAME,LATITUDE83,LONGITUDE83"),
         "frs_npl":        lambda: frs_npl(lat, lon, 1.0),
         "echo_rcra_ca":   lambda: echogeo_rcra_all(lat, lon, 1.0)["ca"],
@@ -1017,8 +1017,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.79",
-        "name": "Phase I ESA Proxy v9.79",
+        "version": "9.80",
+        "name": "Phase I ESA Proxy v9.80",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
