@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.81
+Phase I ESA Database Proxy — v9.82
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -712,18 +712,21 @@ def query():
         seen_bf = set()       # SITE_IDs already added
 
         def coord_is_dup(slat, slon, sname, threshold=0.1):
-            """Return True if within threshold miles AND shares a significant name word
-            with any existing brownfield site."""
+            """Return True if within threshold miles AND shares a significant word stem
+            with any existing brownfield site. Truncates to 5 chars for typo tolerance."""
+            import re
             stopwords = {"THE","OF","A","AN","AND","AT","IN","INC","LLC","CORP",
                          "SITE","SITES","AREA","BROWNFIELD","BROWNFIELDS","COUNTY",
                          "PARK","FORMER","FLORIDA","LANDFILL","HISTORIC","WASTE",
                          "CLEANUP","INDUSTRIAL","COMMERCIAL","PROPERTY","STORMWATER",
                          "POND","DETENTION","CLASS","III","II","I"}
-            name_words = set(sname.upper().replace("-"," ").split()) - stopwords
+            def sig(name):
+                words = re.sub(r'[^A-Z0-9 ]', '', name.upper()).split()
+                return {w[:5] for w in words if w not in stopwords and len(w) >= 3}
+            name_sig = sig(sname)
             for c, cname in zip(bf_coords, bf_names):
                 if haversine(slat, slon, c[0], c[1]) < threshold:
-                    cname_words = set(cname.upper().replace("-"," ").split()) - stopwords
-                    if name_words & cname_words:  # any word overlap
+                    if name_sig & sig(cname):  # any word stem overlap
                         return True
             return False
 
@@ -888,9 +891,9 @@ def query():
 
     # ── Cross-category deduplication ─────────────────────────────────────────
     # A site appearing in multiple DEP Cleanup categories should only be counted
-    # in the highest-priority category. Priority: brown > state_superfund > cont > vol > lust
-    dedup_priority = ["state_superfund", "brown", "lust", "cont", "vol"]
-    # Stopwords for cross-category dedup name matching
+    # in the highest-priority category. Priority: state_superfund > lust > cont > vol
+    # Brownfields handled separately below via name-based dedup against vol
+    dedup_priority = ["state_superfund", "lust", "cont", "vol"]
     dedup_stopwords = {"THE","OF","A","AN","AND","AT","IN","INC","LLC","CORP",
                        "SITE","SITES","AREA","BROWNFIELD","BROWNFIELDS","COUNTY",
                        "PARK","FORMER","FLORIDA","LANDFILL","HISTORIC","WASTE",
@@ -898,21 +901,18 @@ def query():
                        "CLASS","III","II","I","ST","RD","AVE","BLVD","DR","LN"}
 
     def name_sig(name):
-        """Return frozenset of significant word stems from a site name.
-        Truncates words to 5 chars to handle minor typos (e.g. SOUTHL → SOUTH)."""
         import re
         words = re.sub(r'[^A-Z0-9 ]', '', name.strip().upper()).split()
         words = [w[:5] for w in words if w not in dedup_stopwords and len(w) >= 3]
         return frozenset(words) if words else frozenset({name.strip().upper()[:10]})
 
-    seen_sigs = []  # list of frozensets already claimed
+    seen_sigs = []
     for category in dedup_priority:
         if category not in res or "sites" not in res[category]:
             continue
         filtered = []
         for site in res[category].get("sites", []):
             sig = name_sig(site["name"])
-            # Check if this site's significant words overlap with any already claimed site
             is_dup = any(len(sig & seen) >= 2 for seen in seen_sigs)
             if not is_dup:
                 seen_sigs.append(sig)
@@ -920,7 +920,27 @@ def query():
         res[category]["sites"] = filtered
         res[category]["count"] = len(filtered)
 
+    # Remove vol sites that duplicate brownfield sites
+    # Use broader stopwords (keep NORTH/SOUTH/CENTRAL) for this specific check
+    if "brown" in res and "vol" in res:
+        import re
+        bf_stopwords = {"THE","OF","A","AN","AND","AT","IN","INC","LLC","CORP",
+                        "SITE","SITES","AREA","BROWNFIELD","BROWNFIELDS","COUNTY",
+                        "PARK","FORMER","FLORIDA","WASTE","CLEANUP","INDUSTRIAL",
+                        "COMMERCIAL","PROPERTY","PART","CLASS","III","II","I",
+                        "ST","RD","AVE","BLVD","DR","LN"}
+        def bf_sig(name):
+            words = re.sub(r'[^A-Z0-9 ]', '', name.strip().upper()).split()
+            words = [w[:5] for w in words if w not in bf_stopwords and len(w) >= 3]
+            return frozenset(words) if words else frozenset({name.strip().upper()[:10]})
+        brown_sigs = [bf_sig(s["name"]) for s in res["brown"].get("sites", [])]
+        vol_filtered = [s for s in res["vol"].get("sites", [])
+                        if not any(len(bf_sig(s["name"]) & bs) >= 2 for bs in brown_sigs)]
+        res["vol"]["sites"] = vol_filtered
+        res["vol"]["count"] = len(vol_filtered)
+
     return jsonify(res)
+
 
 # ── Debug endpoint ────────────────────────────────────────────────────────────
 @app.route("/debug", methods=["GET"])
@@ -1033,8 +1053,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.81",
-        "name": "Phase I ESA Proxy v9.81",
+        "version": "9.82",
+        "name": "Phase I ESA Proxy v9.82",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
