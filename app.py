@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.75
+Phase I ESA Database Proxy — v9.76
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -841,15 +841,32 @@ def query():
     # A site appearing in multiple DEP Cleanup categories should only be counted
     # in the highest-priority category. Priority: brown > state_superfund > cont > vol > lust
     dedup_priority = ["state_superfund", "brown", "lust", "cont", "vol"]
-    seen_globally = set()
+    # Stopwords for cross-category dedup name matching
+    dedup_stopwords = {"THE","OF","A","AN","AND","AT","IN","INC","LLC","CORP",
+                       "SITE","SITES","AREA","BROWNFIELD","BROWNFIELDS","COUNTY",
+                       "PARK","FORMER","FLORIDA","LANDFILL","HISTORIC","WASTE",
+                       "CLEANUP","INDUSTRIAL","COMMERCIAL","PROPERTY","PART",
+                       "CLASS","III","II","I","ST","RD","AVE","BLVD","DR","LN"}
+
+    def name_sig(name):
+        """Return frozenset of significant word stems from a site name.
+        Truncates words to 5 chars to handle minor typos (e.g. SOUTHL → SOUTH)."""
+        import re
+        words = re.sub(r'[^A-Z0-9 ]', '', name.strip().upper()).split()
+        words = [w[:5] for w in words if w not in dedup_stopwords and len(w) >= 3]
+        return frozenset(words) if words else frozenset({name.strip().upper()[:10]})
+
+    seen_sigs = []  # list of frozensets already claimed
     for category in dedup_priority:
         if category not in res or "sites" not in res[category]:
             continue
         filtered = []
         for site in res[category].get("sites", []):
-            name_key = site["name"].strip().upper()
-            if name_key not in seen_globally:
-                seen_globally.add(name_key)
+            sig = name_sig(site["name"])
+            # Check if this site's significant words overlap with any already claimed site
+            is_dup = any(len(sig & seen) >= 2 for seen in seen_sigs)
+            if not is_dup:
+                seen_sigs.append(sig)
                 filtered.append(site)
         res[category]["sites"] = filtered
         res[category]["count"] = len(filtered)
@@ -960,8 +977,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.75",
-        "name": "Phase I ESA Proxy v9.75",
+        "version": "9.76",
+        "name": "Phase I ESA Proxy v9.76",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
