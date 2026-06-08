@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.91
+Phase I ESA Database Proxy — v9.92
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -863,7 +863,7 @@ def query():
         "solid":          lambda: (lambda sites: {"count": len(sites), "sites": sites})(
                               list({s["name"]: s for s in sorted(
                                   parse_fdep(fdep_query(SOLID_WASTE, lat, lon, 0.5,
-                                      where="FACILITY_STATUS NOT IN ('Closed','Inactive','CLOSED','INACTIVE','Closed, No Gw Monitoring','Closed, Gw Monitoring')",
+                                      where="FACILITY_STATUS NOT IN ('Closed','CLOSED','Closed, No Gw Monitoring','Closed, Gw Monitoring')",
                                       out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"),
                                       lat, lon, "FACILITY_NAME", "FACILITY_STATUS", set()),
                                   key=lambda x: x["distance"])}.values())),  # deduplicated by name
@@ -1102,8 +1102,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.91",
-        "name": "Phase I ESA Proxy v9.91",
+        "version": "9.92",
+        "name": "Phase I ESA Proxy v9.92",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
