@@ -461,6 +461,7 @@ function renderResults() {
                 <div>
                   <div class="site-name">${s.name}</div>
                   <div class="site-status">${s.status||''}</div>
+                  ${s.nexus_url ? `<a href="${s.nexus_url}" target="_blank" style="font-size:0.68rem;color:var(--info);font-family:var(--mono);text-decoration:none;display:block;margin-top:2px;">↗ FDEP Nexus</a>` : ''}
                   ${s.nc&&!item.noC?'<span class="badge badge-nc">NC</span>':''}
                 </div>
                 <div class="site-dist">${(s.distance||0).toFixed(2)} mi</div>
