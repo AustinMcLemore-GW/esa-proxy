@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.93
+Phase I ESA Database Proxy — v9.94
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -848,6 +848,18 @@ def query():
         echogeo_results["tsd"] = frs_rcra_results["tsd"]
         echogeo_results["gen"] = frs_rcra_results["gen"]
 
+    def get_solid():
+        data = fdep_query(SOLID_WASTE, lat, lon, 0.5,
+            where="FACILITY_STATUS NOT IN ('Closed','CLOSED','Closed, No Gw Monitoring','Closed, Gw Monitoring')",
+            out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE")
+        sites = parse_fdep(data, lat, lon, "FACILITY_NAME", "FACILITY_STATUS", set())
+        # Deduplicate by name
+        seen = {}
+        for s in sorted(sites, key=lambda x: x["distance"]):
+            if s["name"] not in seen:
+                seen[s["name"]] = s
+        return {"count": len(seen), "sites": list(seen.values())}
+
     task_map = {
         "npl":            lambda: frs_npl(lat, lon, 1.0, status_filter=["Currently on the Final NPL","Proposed for NPL"]),
         "fuds":           lambda: fuds(lat, lon, 1.0),
@@ -860,13 +872,7 @@ def query():
         "cont":           lambda: (lambda s: {"count": len(s), "sites": s})(merge_dedup(
                               parse_fdep(fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=CONT_WHERE, out_fields=DEP_FIELDS), lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC),
                               eric_query(lat, lon, 0.5, program_filter=["State Funded Cleanup Program","Site Investigation Section","Hazardous Waste Cleanup Program","CERCLA Site Screening Program","State and Tribal Response Program","State-owned Lands Cleanup Program"]))),
-        "solid":          lambda: (lambda sites: {"count": len(sites), "sites": sites})(
-                              list({s["name"]: s for s in sorted(
-                                  parse_fdep(fdep_query(SOLID_WASTE, lat, lon, 0.5,
-                                      where="FACILITY_STATUS NOT IN ('Closed','CLOSED','Closed, No Gw Monitoring','Closed, Gw Monitoring')",
-                                      out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"),
-                                      lat, lon, "FACILITY_NAME", "FACILITY_STATUS", set()),
-                                  key=lambda x: x["distance"])}.values())),  # deduplicated by name
+        "solid":          lambda: get_solid(),
         "lust":           get_lust,
         "vol":            lambda: (lambda s: {"count": len(s), "sites": s})(merge_dedup(
                               parse_fdep(fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=VOL_WHERE, out_fields=DEP_FIELDS), lat, lon, "BUSINESS_NAME", "RSC2_REMEDIATION_STATUS_KEY", DEP_NC),
@@ -1110,8 +1116,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.93",
-        "name": "Phase I ESA Proxy v9.93",
+        "version": "9.94",
+        "name": "Phase I ESA Proxy v9.94",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
