@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.87
+Phase I ESA Database Proxy — v9.88
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -390,7 +390,9 @@ def echogeo_rcra_all(lat, lon, radius_miles):
         is_tsd = (any("P" in f for f in flags) or
                   any(t in universe for t in ["TSD","TSDF","LEGACY TSDF"]))
         if is_tsd and dist <= 0.5:
-            tsd_sites.append(dict(site))
+            tsd_site = dict(site)
+            tsd_site["nc"] = status not in ["No Violation Identified", ""]
+            tsd_sites.append(tsd_site)
 
         # Generators — within 0.05 miles
         if any(t in universe for t in ["LQG","SQG","VSQG","CESQG"]) and dist <= 0.05:
@@ -1061,8 +1063,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.87",
-        "name": "Phase I ESA Proxy v9.87",
+        "version": "9.88",
+        "name": "Phase I ESA Proxy v9.88",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
