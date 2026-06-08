@@ -988,6 +988,9 @@ def debug():
         "stcm_lust":      lambda: fdep_query(STCM_LUST, lat, lon, 0.5, out_fields="SITE_NAME,SITE_STATUS,DISCHARGE_DATE"),
         "stcm_tanks":     lambda: fdep_query(STCM_TANKS, lat, lon, 0.05, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"),
         "solid":          lambda: fdep_query(SOLID_WASTE, lat, lon, 0.5, out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"),
+        "solid_filtered": lambda: fdep_query(SOLID_WASTE, lat, lon, 0.5,
+            where="FACILITY_STATUS NOT IN ('Closed','CLOSED','Closed, No Gw Monitoring','Closed, Gw Monitoring')",
+            out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"),
         "ic":             lambda: requests.get(ICR, params={
             "geometry": f"{lon-0.001},{lat-0.001},{lon+0.001},{lat+0.001}",
             "geometryType": "esriGeometryEnvelope",
