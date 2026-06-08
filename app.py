@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.85
+Phase I ESA Database Proxy — v9.86
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -1061,8 +1061,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.85",
-        "name": "Phase I ESA Proxy v9.85",
+        "version": "9.86",
+        "name": "Phase I ESA Proxy v9.86",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
@@ -1397,6 +1397,15 @@ def find_ca_old():
         results["any_error"] = str(e)
 
     return jsonify(results)
+
+
+@app.route("/clearcache", methods=["GET"])
+def clearcache():
+    """Clear the RCRA CA cache."""
+    with _rcra_cache_lock:
+        count = len(_rcra_cache)
+        _rcra_cache.clear()
+    return jsonify({"cleared": count, "message": f"Cleared {count} cached grid cells"})
 
 
 if __name__ == "__main__":
