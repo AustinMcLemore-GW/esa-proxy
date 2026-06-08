@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.92
+Phase I ESA Database Proxy — v9.93
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -991,6 +991,11 @@ def debug():
         "solid_filtered": lambda: fdep_query(SOLID_WASTE, lat, lon, 0.5,
             where="FACILITY_STATUS NOT IN ('Closed','CLOSED','Closed, No Gw Monitoring','Closed, Gw Monitoring')",
             out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"),
+        "solid_parsed":   lambda: (lambda d: {"raw_count": len(d.get("features",[])), 
+            "parsed": parse_fdep(d, lat, lon, "FACILITY_NAME", "FACILITY_STATUS", set())})(
+            fdep_query(SOLID_WASTE, lat, lon, 0.5,
+            where="FACILITY_STATUS NOT IN ('Closed','CLOSED','Closed, No Gw Monitoring','Closed, Gw Monitoring')",
+            out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE")),
         "ic":             lambda: requests.get(ICR, params={
             "geometry": f"{lon-0.001},{lat-0.001},{lon+0.001},{lat+0.001}",
             "geometryType": "esriGeometryEnvelope",
@@ -1105,8 +1110,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.92",
-        "name": "Phase I ESA Proxy v9.92",
+        "version": "9.93",
+        "name": "Phase I ESA Proxy v9.93",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
