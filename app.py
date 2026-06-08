@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.88
+Phase I ESA Database Proxy — v9.89
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -971,6 +971,12 @@ def debug():
         "stcm_tanks":     lambda: fdep_query(STCM_TANKS, lat, lon, 0.05, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"),
         "solid":          lambda: fdep_query(SOLID_WASTE, lat, lon, 0.5, out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"),
         "ic":             lambda: fdep_query(ICR, lat, lon, 0.05, out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE"),
+        "ic_layer_info":  lambda: requests.get(
+            "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/DWM_WASTE_ICR_BACKG/MapServer/12",
+            params={"f":"json"}, timeout=15).json(),
+        "ic_new":         lambda: requests.get(
+            "https://services1.arcgis.com/O1JpcwDW8sjYuddV/arcgis/rest/services/Florida_Institutional_Controls_Registry/FeatureServer/0/query",
+            params={"where":"1=1","resultRecordCount":3,"outFields":"*","returnGeometry":"false","f":"json"}, timeout=15).json(),
         "eric":           lambda: fdep_query(ERIC_LAYER, lat, lon, 0.5, out_fields="SITE_NAME,PROGRAM,SITE_STATUS,ERIC_ID"),
         "dep_cont":       lambda: fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=CONT_WHERE, out_fields=DEP_FIELDS),
         "dep_lust":       lambda: fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=LUST_WHERE, out_fields=DEP_FIELDS),
