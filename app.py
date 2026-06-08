@@ -1069,8 +1069,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.88",
-        "name": "Phase I ESA Proxy v9.88",
+        "version": "9.89",
+        "name": "Phase I ESA Proxy v9.89",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
