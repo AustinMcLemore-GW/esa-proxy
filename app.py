@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.95
+Phase I ESA Database Proxy — v9.96
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -139,7 +139,11 @@ def eric_query(lat, lon, radius_miles, program_filter=None):
             except: pass
         status = str(attrs.get("SITE_STATUS","") or "")
         nc = status.upper() in ERIC_NC
-        sites.append({"name": name, "distance": dist, "status": status, "nc": nc})
+        eric_id = str(attrs.get("ERIC_ID","") or "")
+        site = {"name": name, "distance": dist, "status": status, "nc": nc}
+        if eric_id:
+            site["nexus_url"] = f"https://prodenv.dep.state.fl.us/DepNexus/public/electronic-documents/{eric_id}/facility!search"
+        sites.append(site)
     sites.sort(key=lambda s: s["distance"])
     return sites
 
@@ -184,7 +188,12 @@ def parse_fdep(data, lat, lon, name_field, status_field=None, nc_statuses=None):
             except: pass
         status = str(attrs.get(status_field, "") or "") if status_field else ""
         nc = bool(nc_statuses and status in nc_statuses)
-        sites.append({"name": name, "distance": dist, "status": status, "nc": nc})
+        # Extract Nexus URL from DOCUMENTS field if available
+        nexus_url = str(attrs.get("DOCUMENTS", "") or "")
+        site = {"name": name, "distance": dist, "status": status, "nc": nc}
+        if nexus_url:
+            site["nexus_url"] = nexus_url
+        sites.append(site)
     sites.sort(key=lambda s: s["distance"])
     return sites
 
@@ -235,7 +244,7 @@ CIMC_RCRA_CA  = "https://services.arcgis.com/cJ9YHowT8TU7DUyn/arcgis/rest/servic
 ECHOGEO_RCRA  = "https://echogeo.epa.gov/arcgis/rest/services/ECHO/Facilities/MapServer/3/query"
 
 # ── DEP Cleanup field constants ───────────────────────────────────────────────
-DEP_FIELDS  = "BUSINESS_NAME,RSC2_REMEDIATION_STATUS_KEY,CLCC_CLEANUP_CATEGORY_KEY,SOURCE_DATABASE_NAME"
+DEP_FIELDS  = "BUSINESS_NAME,RSC2_REMEDIATION_STATUS_KEY,CLCC_CLEANUP_CATEGORY_KEY,SOURCE_DATABASE_NAME,SOURCE_DATABASE_ID,DOCUMENTS"
 SUPER_WHERE = "CLCC_CLEANUP_CATEGORY_KEY='SUPER'"
 CONT_WHERE  = "CLCC_CLEANUP_CATEGORY_KEY IN ('OTHCU','PFAS')"
 LUST_WHERE  = "CLCC_CLEANUP_CATEGORY_KEY='PETRO'"
@@ -1117,8 +1126,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.95",
-        "name": "Phase I ESA Proxy v9.95",
+        "version": "9.96",
+        "name": "Phase I ESA Proxy v9.96",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
