@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.86
+Phase I ESA Database Proxy — v9.87
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -1061,8 +1061,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.86",
-        "name": "Phase I ESA Proxy v9.86",
+        "version": "9.87",
+        "name": "Phase I ESA Proxy v9.87",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
@@ -1071,24 +1071,14 @@ def health():
 
 @app.route("/rcrtest", methods=["GET"])
 def rcrtest():
-    """Test ECHO GeoServer RCR_STATUS values to find CA facilities."""
-    lat = float(request.args.get("lat", 27.793096))
-    lon = float(request.args.get("lon", -82.671942))
+    """Test ECHO GeoServer RCR_STATUS values — show PA facilities detail."""
+    lat = float(request.args.get("lat", 27.8810756))
+    lon = float(request.args.get("lon", -82.7475217))
     results = {}
     mn_lat, mx_lat, mn_lon, mx_lon = bbox(lat, lon, 1.0)
     envelope = f"{mn_lon},{mn_lat},{mx_lon},{mx_lat}"
 
-    # Check all ECHO GeoServer layers
-    try:
-        r = requests.get("https://echogeo.epa.gov/arcgis/rest/services/ECHO/Facilities/MapServer",
-            params={"f":"json"}, timeout=15)
-        data = r.json()
-        results["echo_geo_layers"] = [{"id": l["id"], "name": l["name"]}
-                                       for l in data.get("layers",[])]
-    except Exception as e:
-        results["echo_geo_layers_error"] = str(e)
-
-    # Get all RCRA facilities with RCR_STATUS field
+    # Get all RCRA facilities with full details
     try:
         r = requests.get(ECHOGEO_RCRA, params={
             "geometry": envelope, "geometryType": "esriGeometryEnvelope",
@@ -1100,26 +1090,29 @@ def rcrtest():
         }, timeout=20)
         data = r.json()
         features = data.get("features", [])
-        # Show all unique RCR_STATUS values and flag any with A
         status_values = {}
-        ca_candidates = []
+        pa_facilities = []
         for f in features:
             attrs = f["attributes"]
             rcr_s = str(attrs.get("RCR_STATUS","") or "")
             status_values[rcr_s] = status_values.get(rcr_s, 0) + 1
-            # Check for A flag
-            if "(A" in rcr_s or " A)" in rcr_s or rcr_s == "A":
-                ca_candidates.append({
+            if "PA" in rcr_s or " P" in rcr_s:
+                pa_facilities.append({
                     "name": attrs.get("RCR_NAME"),
                     "rcr_status": rcr_s,
                     "universe": attrs.get("RCRA_UNIVERSE"),
                     "compliance": attrs.get("RCRA_CURR_COMPL_STATUS"),
+                    "lat": attrs.get("FAC_LAT"),
+                    "lon": attrs.get("FAC_LONG"),
                     "rcra_ids": attrs.get("RCRA_IDS")
                 })
         results["total_facilities"] = len(features)
         results["rcr_status_values"] = status_values
-        results["ca_candidates"] = ca_candidates
-        results["echogeo_error"] = data.get("error")
+        results["pa_facilities"] = pa_facilities
+        results["echo_geo_layers"] = [{"id": l["id"], "name": l["name"]}
+            for l in requests.get(
+                "https://echogeo.epa.gov/arcgis/rest/services/ECHO/Facilities/MapServer",
+                params={"f":"json"}, timeout=15).json().get("layers",[])]
     except Exception as e:
         results["error"] = str(e)
 
