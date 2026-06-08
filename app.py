@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.89
+Phase I ESA Database Proxy — v9.90
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -971,12 +971,20 @@ def debug():
         "stcm_tanks":     lambda: fdep_query(STCM_TANKS, lat, lon, 0.05, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"),
         "solid":          lambda: fdep_query(SOLID_WASTE, lat, lon, 0.5, out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"),
         "ic":             lambda: fdep_query(ICR, lat, lon, 0.05, out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE"),
-        "ic_layer_info":  lambda: requests.get(
-            "https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/DWM_WASTE_ICR_BACKG/MapServer/12",
-            params={"f":"json"}, timeout=15).json(),
-        "ic_new":         lambda: requests.get(
-            "https://services1.arcgis.com/O1JpcwDW8sjYuddV/arcgis/rest/services/Florida_Institutional_Controls_Registry/FeatureServer/0/query",
-            params={"where":"1=1","resultRecordCount":3,"outFields":"*","returnGeometry":"false","f":"json"}, timeout=15).json(),
+        "ic_envelope":    lambda: requests.get(ICR, params={
+            "geometry": f"{lon-0.01},{lat-0.01},{lon+0.01},{lat+0.01}",
+            "geometryType": "esriGeometryEnvelope",
+            "spatialRel": "esriSpatialRelIntersects",
+            "inSR": "4326", "outSR": "4326",
+            "outFields": "PRIMARY_SITE_NAME,PRIMARY_SITE_ID,BOUNDARY_RESTRICTIONS,BOUNDARY_CONTAMINATIONS,BEGIN_DATE,END_DATE",
+            "returnGeometry": "false", "f": "json"}, timeout=15).json(),
+        "ic_1mi":         lambda: requests.get(ICR, params={
+            "geometry": f"{lon-0.015},{lat-0.015},{lon+0.015},{lat+0.015}",
+            "geometryType": "esriGeometryEnvelope",
+            "spatialRel": "esriSpatialRelIntersects",
+            "inSR": "4326", "outSR": "4326",
+            "outFields": "PRIMARY_SITE_NAME,PRIMARY_SITE_ID,BOUNDARY_RESTRICTIONS,BEGIN_DATE,END_DATE",
+            "returnGeometry": "false", "f": "json"}, timeout=15).json(),
         "eric":           lambda: fdep_query(ERIC_LAYER, lat, lon, 0.5, out_fields="SITE_NAME,PROGRAM,SITE_STATUS,ERIC_ID"),
         "dep_cont":       lambda: fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=CONT_WHERE, out_fields=DEP_FIELDS),
         "dep_lust":       lambda: fdep_query(DEP_CLEANUP, lat, lon, 0.5, where=LUST_WHERE, out_fields=DEP_FIELDS),
@@ -1069,8 +1077,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.89",
-        "name": "Phase I ESA Proxy v9.89",
+        "version": "9.90",
+        "name": "Phase I ESA Proxy v9.90",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
