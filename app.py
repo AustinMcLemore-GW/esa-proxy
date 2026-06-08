@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.90
+Phase I ESA Database Proxy — v9.91
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -882,7 +882,25 @@ def query():
                                        out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"),
                                    lat, lon, "FACILITY_NAME", "FACILITY_STATUS", set())]),
         "rcra_gen":       lambda: echogeo_results["gen"],
-        "ic":             lambda: mk(None)(parse_fdep(fdep_query(ICR, lat, lon, 0.05, out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE"), lat, lon, "SITE_NAME", "IC_STATUS", {"ACTIVE","Active"})),
+        "ic":             lambda: (lambda r: {
+            "count": len(r),
+            "sites": r
+        })(list({attrs["PRIMARY_SITE_ID"] or attrs["PRIMARY_SITE_NAME"]: {
+            "name": attrs["PRIMARY_SITE_NAME"] or "Unnamed IC Site",
+            "distance": 0.0,
+            "status": "ACTIVE" if not attrs.get("END_DATE") else "INACTIVE",
+            "nc": not attrs.get("END_DATE")
+        } for feat in requests.get(ICR, params={
+            "geometry": f"{lon-0.001},{lat-0.001},{lon+0.001},{lat+0.001}",
+            "geometryType": "esriGeometryEnvelope",
+            "spatialRel": "esriSpatialRelIntersects",
+            "inSR": "4326", "outSR": "4326",
+            "outFields": "PRIMARY_SITE_NAME,PRIMARY_SITE_ID,BOUNDARY_RESTRICTIONS,END_DATE",
+            "returnGeometry": "false", "f": "json"
+        }, timeout=15).json().get("features", [])
+        for attrs in [feat["attributes"]]
+        if attrs.get("PRIMARY_SITE_NAME") or attrs.get("PRIMARY_SITE_ID")
+        }.values())),
         "erns":           lambda: erns(zipcode),
     }
 
@@ -970,7 +988,14 @@ def debug():
         "stcm_lust":      lambda: fdep_query(STCM_LUST, lat, lon, 0.5, out_fields="SITE_NAME,SITE_STATUS,DISCHARGE_DATE"),
         "stcm_tanks":     lambda: fdep_query(STCM_TANKS, lat, lon, 0.05, out_fields="FACILITY_NAME,FACILITY_STATUS,FACILITY_CLEANUP_STATUS"),
         "solid":          lambda: fdep_query(SOLID_WASTE, lat, lon, 0.5, out_fields="FACILITY_NAME,FACILITY_STATUS,CLASS,FACILITY_TYPE"),
-        "ic":             lambda: fdep_query(ICR, lat, lon, 0.05, out_fields="SITE_NAME,IC_STATUS,MECHANISM_TYPE"),
+        "ic":             lambda: requests.get(ICR, params={
+            "geometry": f"{lon-0.001},{lat-0.001},{lon+0.001},{lat+0.001}",
+            "geometryType": "esriGeometryEnvelope",
+            "spatialRel": "esriSpatialRelIntersects",
+            "inSR": "4326", "outSR": "4326",
+            "outFields": "PRIMARY_SITE_NAME,PRIMARY_SITE_ID,BOUNDARY_RESTRICTIONS,BOUNDARY_CONTAMINATIONS,END_DATE",
+            "returnGeometry": "false", "f": "json"
+        }, timeout=15).json(),
         "ic_envelope":    lambda: requests.get(ICR, params={
             "geometry": f"{lon-0.01},{lat-0.01},{lon+0.01},{lat+0.01}",
             "geometryType": "esriGeometryEnvelope",
@@ -1077,8 +1102,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.90",
-        "name": "Phase I ESA Proxy v9.90",
+        "version": "9.91",
+        "name": "Phase I ESA Proxy v9.91",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
