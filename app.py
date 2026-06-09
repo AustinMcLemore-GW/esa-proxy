@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.101
+Phase I ESA Database Proxy — v9.102
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -1126,8 +1126,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.101",
-        "name": "Phase I ESA Proxy v9.101",
+        "version": "9.102",
+        "name": "Phase I ESA Proxy v9.102",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
@@ -1475,6 +1475,7 @@ def nexus_docs():
 
     PRIORITY_TYPES = {
         'SITE ASSESSMENT RELATED': 10,
+        'REMEDIAL ACTION RELATED': 10,
         'OPERATION AND MAINT - REMEDIAL ACTION RPT RELATED': 10,
         'MONITORING PLANS AND REPORTS RELATED': 8,
         'REMEDIAL ACTION PLAN RELATED': 9,
@@ -1484,8 +1485,6 @@ def nexus_docs():
         'POTABLE WELL SURVEY - SAMPLING': 5,
         'DISCHARGE REPORTING RELATED': 4,
     }
-    GOOD_SUBJECTS_EXTRA = ['RAGR','GENERAL REMEDIAL ACTION','QUARTERLY REPORT',
-                           'Q1','Q2','Q3','Q4','ANNUAL REPORT']
     GOOD_SUBJECTS = ['ASSESSMENT REPORT','SITE ASSESSMENT','CONTAMINATION ASSESSMENT','RAGR','GENERAL REMEDIAL ACTION','QUARTERLY REMEDIAL',
                      'MONITORING REPORT','REMEDIAL ACTION','CLOSURE REPORT',
                      'GROUNDWATER','SOIL ASSESSMENT','INTERIM ASSESSMENT']
@@ -1514,23 +1513,12 @@ def nexus_docs():
             "Referer": (f"https://prodenv.dep.state.fl.us/DepNexus/public/"
                        f"electronic-documents/{facility_id}/facility!search")
         }
-        rows = []
-        page = 1
-        while True:
-            url = (f"https://prodenv.dep.state.fl.us/DepNexus/public/electronic-documents"
-                   f"/{facility_id}/export?wildCardMatch=false&page={page}")
-            r = requests.get(url, timeout=20, headers=headers)
-            r.raise_for_status()
-            text = r.text.strip()
-            if not text: break
-            reader = csv.DictReader(io.StringIO(text))
-            page_rows = list(reader)
-            if not page_rows: break
-            rows.extend(page_rows)
-            # If fewer than 100 rows returned, probably last page
-            if len(page_rows) < 100: break
-            page += 1
-            if page > 20: break  # safety limit
+        url = (f"https://prodenv.dep.state.fl.us/DepNexus/public/electronic-documents"
+               f"/{facility_id}/export?wildCardMatch=false&page=1")
+        r = requests.get(url, timeout=20, headers=headers)
+        r.raise_for_status()
+        reader = csv.DictReader(io.StringIO(r.text))
+        rows = list(reader)
     except Exception as e:
         return jsonify({"error": str(e), "facility_id": facility_id})
 
