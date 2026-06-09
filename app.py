@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.99
+Phase I ESA Database Proxy — v9.100
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -1126,8 +1126,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.99",
-        "name": "Phase I ESA Proxy v9.99",
+        "version": "9.100",
+        "name": "Phase I ESA Proxy v9.100",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
@@ -1567,6 +1567,49 @@ def nexus_docs():
             "score": score_doc(r)
         } for r in candidates[:5]]
     })
+
+
+@app.route("/nexus_search", methods=["GET"])
+def nexus_search():
+    """Search Nexus docs for a specific URL fragment or subject keyword."""
+    facility_id = request.args.get("id", "9045812")
+    search = request.args.get("q", "5140103").upper()
+    
+    try:
+        import csv, io
+        headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Referer": f"https://prodenv.dep.state.fl.us/DepNexus/public/electronic-documents/{facility_id}/facility!search"
+        }
+        matches = []
+        page = 1
+        while page <= 50:
+            url = (f"https://prodenv.dep.state.fl.us/DepNexus/public/electronic-documents"
+                   f"/{facility_id}/export?wildCardMatch=false&page={page}")
+            r = requests.get(url, timeout=20, headers=headers)
+            r.raise_for_status()
+            text = r.text.strip()
+            if not text: break
+            reader = csv.DictReader(io.StringIO(text))
+            page_rows = list(reader)
+            if not page_rows: break
+            for row in page_rows:
+                if (search in row.get('FILE PATH','').upper() or 
+                    search in row.get('SUBJECT','').upper() or
+                    search in row.get('DOCUMENT TYPE','').upper()):
+                    matches.append({
+                        "page": page,
+                        "date": row.get('DOCUMENT DATE'),
+                        "type": row.get('DOCUMENT TYPE'),
+                        "subject": row.get('SUBJECT'),
+                        "url": row.get('FILE PATH')
+                    })
+            if len(page_rows) < 100: break
+            page += 1
+        return jsonify({"facility_id": facility_id, "search": search, 
+                       "pages_searched": page, "matches": matches})
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 
 if __name__ == "__main__":
