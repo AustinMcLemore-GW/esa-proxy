@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.96
+Phase I ESA Database Proxy — v9.97
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -1126,8 +1126,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.96",
-        "name": "Phase I ESA Proxy v9.96",
+        "version": "9.97",
+        "name": "Phase I ESA Proxy v9.97",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
@@ -1464,6 +1464,30 @@ def clearcache():
         count = len(_rcra_cache)
         _rcra_cache.clear()
     return jsonify({"cleared": count, "message": f"Cleared {count} cached grid cells"})
+
+
+@app.route("/nexus_docs", methods=["GET"])
+def nexus_docs():
+    """Fetch and parse FDEP Nexus document CSV for a facility."""
+    facility_id = request.args.get("id", "9045812")
+    results = {}
+    
+    # Try page 1 of the export
+    try:
+        url = f"https://prodenv.dep.state.fl.us/DepNexus/public/electronic-documents/{facility_id}/export?wildCardMatch=false&page=1"
+        r = requests.get(url, timeout=20, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "text/csv,application/csv,*/*",
+            "Referer": f"https://prodenv.dep.state.fl.us/DepNexus/public/electronic-documents/{facility_id}/facility!search"
+        })
+        results["status"] = r.status_code
+        results["content_type"] = r.headers.get("Content-Type","")
+        results["sample"] = r.text[:500]
+        results["length"] = len(r.text)
+    except Exception as e:
+        results["error"] = str(e)
+    
+    return jsonify(results)
 
 
 if __name__ == "__main__":
