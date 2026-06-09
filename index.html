@@ -462,7 +462,8 @@ function renderResults() {
                   <div class="site-name">${s.name}</div>
                   <div class="site-status">${s.status||''}</div>
                   ${s.nexus_url ? `<a href="${s.nexus_url}" target="_blank" style="font-size:0.68rem;color:var(--info);font-family:var(--mono);text-decoration:none;display:block;margin-top:2px;">↗ FDEP Nexus</a>` : ''}
-                  ${s.nc&&!item.noC?'<span class="badge badge-nc">NC</span>':''}
+                  ${s.nc&&!item.noC ? `<span class="badge badge-nc">NC</span>` : ''}
+                  ${s.nc && s.nexus_url ? `<button class="btn" style="margin-top:4px;height:26px;padding:0 8px;font-size:0.68rem;" onclick="findDoc(this,'${extractFacilityId(s.nexus_url)}')">↓ Find report</button><div class="doc-result" style="margin-top:4px;font-size:0.72rem;"></div>` : ''}
                 </div>
                 <div class="site-dist">${(s.distance||0).toFixed(2)} mi</div>
               </div>`).join('')}
@@ -557,6 +558,40 @@ function buildReport() {
   document.getElementById('rep-empty').style.display = 'none';
   document.getElementById('rep-body').style.display = 'block';
   showTab('report');
+}
+
+function extractFacilityId(nexusUrl) {
+  if (!nexusUrl) return '';
+  const m = nexusUrl.match(/electronic-documents\/([^\/]+)\//);
+  return m ? m[1] : '';
+}
+
+async function findDoc(btn, facilityId) {
+  if (!facilityId) return;
+  const resultDiv = btn.nextElementSibling;
+  btn.disabled = true;
+  btn.textContent = '⟳ Searching...';
+  resultDiv.textContent = '';
+  try {
+    const r = await fetch(PROXY + '/nexus_docs?id=' + facilityId, {signal: AbortSignal.timeout(30000)});
+    const d = await r.json();
+    if (d.error) {
+      resultDiv.innerHTML = `<span style="color:var(--danger)">Error: ${d.error}</span>`;
+    } else if (!d.best_doc) {
+      resultDiv.innerHTML = `<span style="color:var(--text3)">No assessment reports found (${d.total_docs} docs total)</span>`;
+    } else {
+      const doc = d.best_doc;
+      resultDiv.innerHTML = `<a href="${doc.url}" target="_blank" style="color:var(--accent);text-decoration:none;display:block;line-height:1.4;">
+        ↗ ${doc.subject}<br>
+        <span style="color:var(--text3)">${doc.type} · ${doc.date} · ${doc.file_size}</span>
+      </a>`;
+    }
+    btn.textContent = '✓ Found';
+  } catch(e) {
+    resultDiv.innerHTML = `<span style="color:var(--danger)">Failed: ${e.message}</span>`;
+    btn.textContent = '↓ Find report';
+    btn.disabled = false;
+  }
 }
 
 function copyReport() {
