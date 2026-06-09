@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.97
+Phase I ESA Database Proxy — v9.98
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -1126,8 +1126,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.97",
-        "name": "Phase I ESA Proxy v9.97",
+        "version": "9.98",
+        "name": "Phase I ESA Proxy v9.98",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
@@ -1468,26 +1468,91 @@ def clearcache():
 
 @app.route("/nexus_docs", methods=["GET"])
 def nexus_docs():
-    """Fetch and parse FDEP Nexus document CSV for a facility."""
-    facility_id = request.args.get("id", "9045812")
-    results = {}
-    
-    # Try page 1 of the export
+    """Fetch FDEP Nexus documents for a facility and return the best contamination report."""
+    facility_id = request.args.get("id", "")
+    if not facility_id:
+        return jsonify({"error": "id parameter required"}), 400
+
+    PRIORITY_TYPES = {
+        'SITE ASSESSMENT RELATED': 10,
+        'OPERATION AND MAINT - REMEDIAL ACTION RPT RELATED': 9,
+        'MONITORING PLANS AND REPORTS RELATED': 8,
+        'REMEDIAL ACTION PLAN RELATED': 8,
+        'SOURCE REMOVAL RELATED': 7,
+        'COMPLETION RELATED': 7,
+        'LAB ANALYTICAL REPORTS': 5,
+        'POTABLE WELL SURVEY - SAMPLING': 5,
+        'DISCHARGE REPORTING RELATED': 4,
+    }
+    GOOD_SUBJECTS = ['ASSESSMENT REPORT','SITE ASSESSMENT','CONTAMINATION ASSESSMENT',
+                     'MONITORING REPORT','REMEDIAL ACTION','CLOSURE REPORT',
+                     'GROUNDWATER','SOIL ASSESSMENT','INTERIM ASSESSMENT']
+    BAD_SUBJECTS  = ['INVOICE','RATE SHEET','HASP','CONFIRMATION','UPLOAD',
+                     'ZIP','NOTIFICATION','RECEIPT','CHECKLIST']
+
+    def parse_date(d):
+        from datetime import datetime
+        try: return datetime.strptime(d.strip(), '%m-%d-%Y')
+        except: return datetime.min
+
+    def score_doc(row):
+        score = PRIORITY_TYPES.get(row.get('DOCUMENT TYPE',''), 0)
+        subj = row.get('SUBJECT','').upper()
+        for kw in GOOD_SUBJECTS:
+            if kw in subj: score += 2
+        for kw in BAD_SUBJECTS:
+            if kw in subj: score -= 3
+        return score
+
     try:
-        url = f"https://prodenv.dep.state.fl.us/DepNexus/public/electronic-documents/{facility_id}/export?wildCardMatch=false&page=1"
+        import csv, io
+        url = (f"https://prodenv.dep.state.fl.us/DepNexus/public/electronic-documents"
+               f"/{facility_id}/export?wildCardMatch=false&page=1")
         r = requests.get(url, timeout=20, headers={
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Accept": "text/csv,application/csv,*/*",
-            "Referer": f"https://prodenv.dep.state.fl.us/DepNexus/public/electronic-documents/{facility_id}/facility!search"
+            "Accept": "text/csv,*/*",
+            "Referer": (f"https://prodenv.dep.state.fl.us/DepNexus/public/"
+                       f"electronic-documents/{facility_id}/facility!search")
         })
-        results["status"] = r.status_code
-        results["content_type"] = r.headers.get("Content-Type","")
-        results["sample"] = r.text[:500]
-        results["length"] = len(r.text)
+        r.raise_for_status()
+        reader = csv.DictReader(io.StringIO(r.text))
+        rows = list(reader)
     except Exception as e:
-        results["error"] = str(e)
-    
-    return jsonify(results)
+        return jsonify({"error": str(e), "facility_id": facility_id})
+
+    # Filter to priority types only
+    candidates = [row for row in rows if row.get('DOCUMENT TYPE','') in PRIORITY_TYPES]
+    if not candidates:
+        return jsonify({
+            "facility_id": facility_id,
+            "total_docs": len(rows),
+            "best_doc": None,
+            "message": "No priority documents found — see Nexus for full list"
+        })
+
+    # Score and sort
+    candidates.sort(key=lambda r: (score_doc(r), parse_date(r.get('DOCUMENT DATE',''))), reverse=True)
+    best = candidates[0]
+
+    return jsonify({
+        "facility_id": facility_id,
+        "total_docs": len(rows),
+        "best_doc": {
+            "date": best.get('DOCUMENT DATE',''),
+            "type": best.get('DOCUMENT TYPE',''),
+            "subject": best.get('SUBJECT',''),
+            "url": best.get('FILE PATH',''),
+            "file_type": best.get('FILE TYPE',''),
+            "file_size": best.get('FILE SIZE',''),
+        },
+        "top5": [{
+            "date": r.get('DOCUMENT DATE',''),
+            "type": r.get('DOCUMENT TYPE',''),
+            "subject": r.get('SUBJECT',''),
+            "url": r.get('FILE PATH',''),
+            "score": score_doc(r)
+        } for r in candidates[:5]]
+    })
 
 
 if __name__ == "__main__":
