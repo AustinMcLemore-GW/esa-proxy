@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.104
+Phase I ESA Database Proxy — v9.105
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -1126,8 +1126,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.104",
-        "name": "Phase I ESA Proxy v9.104",
+        "version": "9.105",
+        "name": "Phase I ESA Proxy v9.105",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
@@ -1491,7 +1491,8 @@ def nexus_docs():
                      'INTERIM ASSESSMENT','ANNUAL REPORT','QUARTERLY REPORT']
     BAD_SUBJECTS  = ['INVOICE','RATE SHEET','HASP','CONFIRMATION','UPLOAD',
                      'ZIP','NOTIFICATION','RECEIPT','CHECKLIST','EXCEL TABLES',
-                     'SPREADSHEET','TABLES ONLY']
+                     'SPREADSHEET','TABLES ONLY','ACCEPTANCE LETTER','REVIEW LTR',
+                     'APPROVAL ORDER','NOTICE OF']
 
     def parse_date(d):
         from datetime import datetime
@@ -1499,12 +1500,18 @@ def nexus_docs():
         except: return datetime.min
 
     def score_doc(row):
+        import re
         score = PRIORITY_TYPES.get(row.get('DOCUMENT TYPE',''), 0)
-        subj = row.get('SUBJECT','').upper()
+        subj = row.get('SUBJECT','').upper().strip()
         for kw in GOOD_SUBJECTS:
             if kw in subj: score += 2
         for kw in BAD_SUBJECTS:
             if kw in subj: score -= 3
+        # Standalone RAP in subject = Remedial Action Plan document
+        if re.search(r'\bRAP\b', subj): score += 2
+        # Recency bonus for documents from last 3 years
+        d = parse_date(row.get('DOCUMENT DATE',''))
+        if d.year >= 2022: score += 1
         return score
 
     try:
