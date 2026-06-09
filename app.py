@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.102
+Phase I ESA Database Proxy — v9.104
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -1126,8 +1126,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.102",
-        "name": "Phase I ESA Proxy v9.102",
+        "version": "9.104",
+        "name": "Phase I ESA Proxy v9.104",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
@@ -1474,8 +1474,8 @@ def nexus_docs():
         return jsonify({"error": "id parameter required"}), 400
 
     PRIORITY_TYPES = {
+        'REMEDIAL ACTION RELATED': 12,
         'SITE ASSESSMENT RELATED': 10,
-        'REMEDIAL ACTION RELATED': 10,
         'OPERATION AND MAINT - REMEDIAL ACTION RPT RELATED': 10,
         'MONITORING PLANS AND REPORTS RELATED': 8,
         'REMEDIAL ACTION PLAN RELATED': 9,
@@ -1485,11 +1485,13 @@ def nexus_docs():
         'POTABLE WELL SURVEY - SAMPLING': 5,
         'DISCHARGE REPORTING RELATED': 4,
     }
-    GOOD_SUBJECTS = ['ASSESSMENT REPORT','SITE ASSESSMENT','CONTAMINATION ASSESSMENT','RAGR','GENERAL REMEDIAL ACTION','QUARTERLY REMEDIAL',
-                     'MONITORING REPORT','REMEDIAL ACTION','CLOSURE REPORT',
-                     'GROUNDWATER','SOIL ASSESSMENT','INTERIM ASSESSMENT']
+    GOOD_SUBJECTS = ['ASSESSMENT REPORT','SITE ASSESSMENT','CONTAMINATION ASSESSMENT','RAGR',
+                     'GENERAL REMEDIAL ACTION','QUARTERLY REMEDIAL','MONITORING REPORT',
+                     'REMEDIAL ACTION','CLOSURE REPORT','GROUNDWATER','SOIL ASSESSMENT',
+                     'INTERIM ASSESSMENT','ANNUAL REPORT','QUARTERLY REPORT']
     BAD_SUBJECTS  = ['INVOICE','RATE SHEET','HASP','CONFIRMATION','UPLOAD',
-                     'ZIP','NOTIFICATION','RECEIPT','CHECKLIST']
+                     'ZIP','NOTIFICATION','RECEIPT','CHECKLIST','EXCEL TABLES',
+                     'SPREADSHEET','TABLES ONLY']
 
     def parse_date(d):
         from datetime import datetime
