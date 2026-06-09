@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.100
+Phase I ESA Database Proxy — v9.101
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -1126,8 +1126,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.100",
-        "name": "Phase I ESA Proxy v9.100",
+        "version": "9.101",
+        "name": "Phase I ESA Proxy v9.101",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
@@ -1571,45 +1571,49 @@ def nexus_docs():
 
 @app.route("/nexus_search", methods=["GET"])
 def nexus_search():
-    """Search Nexus docs for a specific URL fragment or subject keyword."""
+    """Test Nexus pagination formats and search for document."""
     facility_id = request.args.get("id", "9045812")
     search = request.args.get("q", "5140103").upper()
-    
+    results = {}
+
     try:
         import csv, io
-        headers = {
-            "User-Agent": "Mozilla/5.0",
+        hdrs = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             "Referer": f"https://prodenv.dep.state.fl.us/DepNexus/public/electronic-documents/{facility_id}/facility!search"
         }
-        matches = []
-        page = 1
-        while page <= 50:
-            url = (f"https://prodenv.dep.state.fl.us/DepNexus/public/electronic-documents"
-                   f"/{facility_id}/export?wildCardMatch=false&page={page}")
-            r = requests.get(url, timeout=20, headers=headers)
-            r.raise_for_status()
-            text = r.text.strip()
-            if not text: break
-            reader = csv.DictReader(io.StringIO(text))
-            page_rows = list(reader)
-            if not page_rows: break
-            for row in page_rows:
-                if (search in row.get('FILE PATH','').upper() or 
-                    search in row.get('SUBJECT','').upper() or
-                    search in row.get('DOCUMENT TYPE','').upper()):
-                    matches.append({
-                        "page": page,
-                        "date": row.get('DOCUMENT DATE'),
-                        "type": row.get('DOCUMENT TYPE'),
-                        "subject": row.get('SUBJECT'),
-                        "url": row.get('FILE PATH')
-                    })
-            if len(page_rows) < 100: break
-            page += 1
-        return jsonify({"facility_id": facility_id, "search": search, 
-                       "pages_searched": page, "matches": matches})
+        # Test page 1 - count rows and show first/last
+        r1 = requests.get(
+            f"https://prodenv.dep.state.fl.us/DepNexus/public/electronic-documents/{facility_id}/export?wildCardMatch=false&page=1",
+            timeout=20, headers=hdrs)
+        rows1 = list(csv.DictReader(io.StringIO(r1.text)))
+        results["page1_count"] = len(rows1)
+        results["page1_first"] = {"date": rows1[0].get("DOCUMENT DATE"), "subject": rows1[0].get("SUBJECT")} if rows1 else None
+        results["page1_last"] = {"date": rows1[-1].get("DOCUMENT DATE"), "subject": rows1[-1].get("SUBJECT")} if rows1 else None
+
+        # Test page 2
+        r2 = requests.get(
+            f"https://prodenv.dep.state.fl.us/DepNexus/public/electronic-documents/{facility_id}/export?wildCardMatch=false&page=2",
+            timeout=20, headers=hdrs)
+        rows2 = list(csv.DictReader(io.StringIO(r2.text)))
+        results["page2_count"] = len(rows2)
+        results["page2_first"] = {"date": rows2[0].get("DOCUMENT DATE"), "subject": rows2[0].get("SUBJECT")} if rows2 else None
+
+        # Try rowOffset pagination
+        r_offset = requests.get(
+            f"https://prodenv.dep.state.fl.us/DepNexus/public/electronic-documents/{facility_id}/export?wildCardMatch=false&rowOffset=100",
+            timeout=20, headers=hdrs)
+        rows_off = list(csv.DictReader(io.StringIO(r_offset.status_code == 200 and r_offset.text or "")))
+        results["offset100_count"] = len(rows_off)
+        results["offset100_first"] = {"date": rows_off[0].get("DOCUMENT DATE"), "subject": rows_off[0].get("SUBJECT")} if rows_off else None
+
+        # Check if page1 same as page2
+        results["page1_same_as_page2"] = (rows1 == rows2)
+        results["total_docs_from_page1"] = len(rows1)
+
     except Exception as e:
-        return jsonify({"error": str(e)})
+        results["error"] = str(e)
+    return jsonify(results)
 
 
 if __name__ == "__main__":
