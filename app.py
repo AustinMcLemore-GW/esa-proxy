@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.108
+Phase I ESA Database Proxy — v9.109
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -916,7 +916,6 @@ def query():
         for attrs in [feat["attributes"]]
         if attrs.get("PRIMARY_SITE_NAME") or attrs.get("PRIMARY_SITE_ID")
         }.values())),
-        "erns":           lambda: erns(zipcode),
     }
 
     with ThreadPoolExecutor(max_workers=6) as executor:
@@ -1126,8 +1125,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.108",
-        "name": "Phase I ESA Proxy v9.108",
+        "version": "9.109",
+        "name": "Phase I ESA Proxy v9.109",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
