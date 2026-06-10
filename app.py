@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.105
+Phase I ESA Database Proxy — v9.106
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -1126,8 +1126,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.105",
-        "name": "Phase I ESA Proxy v9.105",
+        "version": "9.106",
+        "name": "Phase I ESA Proxy v9.106",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
@@ -1488,7 +1488,8 @@ def nexus_docs():
     GOOD_SUBJECTS = ['ASSESSMENT REPORT','SITE ASSESSMENT','CONTAMINATION ASSESSMENT','RAGR',
                      'GENERAL REMEDIAL ACTION','QUARTERLY REMEDIAL','MONITORING REPORT',
                      'REMEDIAL ACTION','CLOSURE REPORT','GROUNDWATER','SOIL ASSESSMENT',
-                     'INTERIM ASSESSMENT','ANNUAL REPORT','QUARTERLY REPORT']
+                     'INTERIM ASSESSMENT','ANNUAL REPORT','QUARTERLY REPORT',
+                     'SSAR','LSSAR','CAR','PARM REPORT','NATURAL ATTENUATION']
     BAD_SUBJECTS  = ['INVOICE','RATE SHEET','HASP','CONFIRMATION','UPLOAD',
                      'ZIP','NOTIFICATION','RECEIPT','CHECKLIST','EXCEL TABLES',
                      'SPREADSHEET','TABLES ONLY','ACCEPTANCE LETTER','REVIEW LTR',
@@ -1509,9 +1510,11 @@ def nexus_docs():
             if kw in subj: score -= 3
         # Standalone RAP in subject = Remedial Action Plan document
         if re.search(r'\bRAP\b', subj): score += 2
-        # Recency bonus for documents from last 3 years
+        # Recency bonus — scaled by age
         d = parse_date(row.get('DOCUMENT DATE',''))
-        if d.year >= 2022: score += 1
+        if d.year >= 2024: score += 3
+        elif d.year >= 2022: score += 2
+        elif d.year >= 2019: score += 1
         return score
 
     try:
