@@ -254,7 +254,7 @@
   <!-- ── SEARCH PANE ── -->
   <div id="pane-search">
     <div class="card">
-      <div class="grid3">
+      <div class="grid2">
         <div>
           <label class="field-label">Latitude</label>
           <input type="number" id="lat" step="0.000001" placeholder="27.852924"/>
@@ -263,15 +263,11 @@
           <label class="field-label">Longitude</label>
           <input type="number" id="lng" step="0.000001" placeholder="-82.703508"/>
         </div>
-        <div>
-          <label class="field-label">ZIP (ERNS)</label>
-          <input type="text" id="zip" placeholder="33615" maxlength="5"/>
-        </div>
       </div>
     </div>
 
     <div class="info-strip">
-      Queries: EPA ECHO (RCRA CA, TSD, generators) · EPA FRS/SEMS (NPL, delisted NPL, CERCLA/NFRAP) · USACE FUDS · FDEP ArcGIS (ERIC, CHAZ, STCM, solid waste, brownfields, IC registry) · Envirofacts ERNS
+      Queries: EPA ECHO (RCRA CA, TSD, generators) · EPA FRS/SEMS (NPL, delisted NPL, CERCLA/NFRAP) · USACE FUDS · FDEP ArcGIS (ERIC, CHAZ, STCM, solid waste, brownfields, IC registry)
     </div>
 
     <div style="display:flex; justify-content:flex-end">
@@ -356,15 +352,13 @@ const CFG = [
   {id:'brown',    label:'Brownfields',                  group:'half',  src:'FDEP Nexus', tmpl:'brownfields',                      noC:false},
   {id:'ust',      label:'Registered storage tanks',     group:'adj',   src:'FDEP Nexus', tmpl:'registered storage tanks',         noC:false},
   {id:'rcra_gen', label:'RCRA generators',              group:'adj',   src:'EPA ECHO',   tmpl:'RCRA generators',                  noC:false},
-  {id:'ic',       label:'Institutional controls',       group:'prop',  src:'FDEP Nexus', tmpl:'institutional controls',           noC:false},
-  {id:'erns',     label:'ERNS release notifications',   group:'prop',  src:'EPA ECHO',   tmpl:'ERNS release notifications',       noC:false},
+  {id:'ic',       label:'Institutional controls',       group:'adj',   src:'FDEP Nexus', tmpl:'institutional controls',           noC:false},
 ];
 
 const GROUPS = [
   {id:'1mile', label:'1-mile radius',        sub:'NPL · FUDS · RCRA corrective action'},
-  {id:'half',  label:'½-mile radius',         sub:'CERCLA · TSD · Hazardous waste · Contamination · Solid waste · LUST · Voluntary cleanup · Brownfields'},
-  {id:'adj',   label:'Adjoining property',    sub:'Registered storage tanks · RCRA generators'},
-  {id:'prop',  label:'Subject property only', sub:'Institutional controls · ERNS'},
+  {id:'half',  label:'0.5-mile radius',       sub:'CERCLA · TSD · Hazardous waste · Contamination · Solid waste · LUST · Voluntary cleanup · Brownfields'},
+  {id:'adj',   label:'Adjoining property',    sub:'Registered storage tanks · RCRA generators · Institutional controls'},
 ];
 
 let results = {}, ncManual = [], ncCtr = 0;
@@ -404,7 +398,6 @@ function setProg(msg, pct) {
 async function runSearch() {
   const lat = parseFloat(document.getElementById('lat').value);
   const lon = parseFloat(document.getElementById('lng').value);
-  const zip = document.getElementById('zip').value.trim();
   if (!lat || !lon || isNaN(lat) || isNaN(lon)) {
     alert('Please enter coordinates or geocode an address first.');
     return;
@@ -414,7 +407,7 @@ async function runSearch() {
   document.getElementById('results-body').style.display = 'none';
   setProg('Connecting to proxy...', 5);
 
-  const url = PROXY + '/query?lat=' + lat + '&lon=' + lon + (zip ? '&zip=' + zip : '');
+  const url = PROXY + '/query?lat=' + lat + '&lon=' + lon;
 
   try {
     setProg('Querying all 16 ASTM databases...', 20);
@@ -548,7 +541,7 @@ function buildReport() {
 
   const clauses = [];
   if (c1.length) clauses.push('no '+fmtList(c1)+' within one mile of the home');
-  if (cH.length) clauses.push('no '+fmtList(cH)+' within half a mile of the home');
+  if (cH.length) clauses.push('no '+fmtList(cH)+' within a half-mile radius of the home');
   if (cA.length) clauses.push('no '+fmtList(cA)+' located on the property or on an adjoining property');
 
   const p1 = "According to the Environmental Protection Agency's (EPA) Cleanups in My Community (CIMC) data, U.S. Army Corps of Engineers (USACE) Formerly Used Defense Sites (FUDS), EPA Enforcement and Compliance History Online (ECHO), and Florida Department of Environmental Protection (FDEP) geospatial data, there are "+(clauses.length?clauses.join('; '):'findings identified across all searched categories — see below')+".";
