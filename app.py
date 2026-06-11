@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.109
+Phase I ESA Database Proxy — v9.110
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -1125,8 +1125,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.109",
-        "name": "Phase I ESA Proxy v9.109",
+        "version": "9.110",
+        "name": "Phase I ESA Proxy v9.110",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
@@ -1495,7 +1495,9 @@ def nexus_docs():
                      'SPREADSHEET','TABLES ONLY','ACCEPTANCE LETTER','REVIEW LTR',
                      'APPROVAL ORDER','NOTICE OF',' - LR','- LR ',
                      'RVW LTR','REVIEW LETTER','COVER LETTER','TRANSMITTAL',
-                     'ACKNOWLEDGEMENT','TRANSFER MEMO']
+                     'ACKNOWLEDGEMENT','TRANSFER MEMO',
+                     'SUPP INFO','RESPONSE TO COMMENTS','RTC','DRCL',
+                     'DEFICIENCY','COMMENT LETTER','RESUBMIT']
     BAD_SUBJECTS  = ['INVOICE','RATE SHEET','HASP','CONFIRMATION','UPLOAD',
                      'ZIP','NOTIFICATION','RECEIPT','CHECKLIST','EXCEL TABLES',
                      'SPREADSHEET','TABLES ONLY','ACCEPTANCE LETTER','REVIEW LTR',
