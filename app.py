@@ -1,5 +1,5 @@
 """
-Phase I ESA Database Proxy — v9.110
+Phase I ESA Database Proxy — v9.113
 FUDS envelope query + dedup, ERIC layer 8 integration, responsible party → voluntary cleanup.
 """
 
@@ -1125,8 +1125,8 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "Phase I ESA Proxy",
-        "version": "9.110",
-        "name": "Phase I ESA Proxy v9.110",
+        "version": "9.113",
+        "name": "Phase I ESA Proxy v9.113",
         "rcra_ca_facilities": len(RCRA_CA_DATA),
         "rcra_ca_status": ca_warning,
         "fuds_fy": FUDS_FY,
@@ -1477,7 +1477,7 @@ def nexus_docs():
         'SITE ASSESSMENT RELATED': 10,
         'OPERATION AND MAINT - REMEDIAL ACTION RPT RELATED': 10,
         'MONITORING PLANS AND REPORTS RELATED': 10,
-        'REMEDIAL ACTION PLAN RELATED': 9,
+        'REMEDIAL ACTION PLAN RELATED': 12,
         'SOURCE REMOVAL RELATED': 7,
         'COMPLETION RELATED': 7,
         'LAB ANALYTICAL REPORTS': 5,
@@ -1489,7 +1489,8 @@ def nexus_docs():
                      'REMEDIAL ACTION','CLOSURE REPORT','GROUNDWATER','SOIL ASSESSMENT',
                      'INTERIM ASSESSMENT','ANNUAL REPORT','QUARTERLY REPORT',
                      'SSAR','LSSAR','CAR','PARM REPORT','NATURAL ATTENUATION',
-                     'NAM REPORT','LETTER REPORT','SAMPLING REPORT']
+                     'NAM REPORT','LETTER REPORT','SAMPLING REPORT',
+                     'LSRAP','LSRAR','RAIR','LSSI SAR','LSSI FINAL','FINAL DELIVERABLE']
     BAD_SUBJECTS  = ['INVOICE','RATE SHEET','HASP','CONFIRMATION','UPLOAD',
                      'ZIP','NOTIFICATION','RECEIPT','CHECKLIST','EXCEL TABLES',
                      'SPREADSHEET','TABLES ONLY','ACCEPTANCE LETTER','REVIEW LTR',
@@ -1497,11 +1498,9 @@ def nexus_docs():
                      'RVW LTR','REVIEW LETTER','COVER LETTER','TRANSMITTAL',
                      'ACKNOWLEDGEMENT','TRANSFER MEMO',
                      'SUPP INFO','RESPONSE TO COMMENTS','RTC','DRCL',
-                     'DEFICIENCY','COMMENT LETTER','RESUBMIT']
-    BAD_SUBJECTS  = ['INVOICE','RATE SHEET','HASP','CONFIRMATION','UPLOAD',
-                     'ZIP','NOTIFICATION','RECEIPT','CHECKLIST','EXCEL TABLES',
-                     'SPREADSHEET','TABLES ONLY','ACCEPTANCE LETTER','REVIEW LTR',
-                     'APPROVAL ORDER','NOTICE OF']
+                     'DEFICIENCY','COMMENT LETTER','RESUBMIT',
+                     'PARTIAL REPORT','FOR INVOICING','INTERIM DELIVERABLE',
+                     'COST PROPOSAL','PROPOSAL RELATED']
 
     def parse_date(d):
         from datetime import datetime
@@ -1520,6 +1519,8 @@ def nexus_docs():
         if re.search(r'\bRAP\b', subj): score += 2
         # Standalone NAM in subject = Natural Attenuation Monitoring report
         if re.search(r'\bNAM\b', subj): score += 2
+        # LSRAP/LSRAR = comprehensive cleanup plans, extra bonus over implementation reports
+        if re.search(r'\bLSRAP\b|\bLSRAR\b|\bL\dLSRAP\b', subj): score += 2
         # Recency bonus — scaled by age
         d = parse_date(row.get('DOCUMENT DATE',''))
         if d.year >= 2024: score += 3
